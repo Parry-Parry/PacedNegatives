@@ -6,8 +6,10 @@ from pyterrier_pisa import PisaIndex
 import numpy as np
 import fire
 
-def main(dataset :str,
-         out_file : str,
+def main(dataset : str,
+         pisa_dataset : str,
+         positives_file : str,
+         negatives_file : str,
          num_negative : int = 5,
          positive_cutoff : int = 50,
          arbitrary_positive : int = 0,
@@ -19,7 +21,7 @@ def main(dataset :str,
     triples.drop_duplicates(inplace=True)
     queries = pd.DataFrame(ds.queries_iter()).rename(columns={'query_id': 'qid', 'text': 'query'})
 
-    pisa_index = PisaIndex.from_dataset('msmarco_passage', 'pisa_porter2')
+    pisa_index = PisaIndex.from_dataset(pisa_dataset, 'pisa_porter2')
     index = pisa_index.bm25(num_results=cutoff, threads=threads)
 
     scores = index.transform(queries)
@@ -35,17 +37,18 @@ def main(dataset :str,
             samples = positive.sample(arbitrary_positive)[['qid', 'docno']]
             triples.append(samples)
     
-    new_frame = []
-    for row in triples.itertuples():
+    negatives_frame = []
+    for row in queries.itertuples():
         record = {}
         record['qid'] = row.qid
-        record['pid'] = row.docno
         for i, n in enumerate(query_frame[row.qid]):
             record[i] = n
-        new_frame.append(record)
+        negatives_frame.append(record)
 
-    new_frame = pd.DataFrame.from_records(new_frame)
-    new_frame.to_csv(out_file, sep='\t', index=False)
+    negatives_frame = pd.DataFrame.from_records(negatives_frame)
+    negatives_frame.to_csv(negatives_file, sep='\t', index=False)
+
+    triples.to_csv(positives_file, sep='\t', index=False, header=False)
     
     return 0
 
