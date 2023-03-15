@@ -3,6 +3,7 @@
 # -------------------------------
 
 from typing import Dict, Tuple, List
+import copy
 import os
 import gc
 import time
@@ -166,7 +167,7 @@ if __name__ == "__main__":
         v_optimizer = SGD(v.parameters(), momentum=0.5)
 
     #lr_scheduler = ReduceLROnPlateau(optimizer, mode="max",
-    #                                 patience=config["learning_rate_scheduler_patience"],
+    #                               import copy  patience=config["learning_rate_scheduler_patience"],
     #                                 factor=config["learning_rate_scheduler_factor"],
     #                                 verbose=True)
     
@@ -212,7 +213,11 @@ if __name__ == "__main__":
     # setup loss
     #
     ranking_loss_fn, qa_loss_fn, inbatch_loss_fn, use_list_loss,use_inbatch_list_loss = get_loss(config)
-    ranking_loss_fn = ranking_loss_fn.cuda(cuda_device)
+    v_loss_fn = copy.deepcopy(ranking_loss_fn)
+
+    ranking_loss_fn = SPL(ranking_loss_fn).cuda(cuda_device)
+    v_loss_fn = SPL(v_loss_fn).cuda(cuda_device)
+
     train_pairwise_distillation = config["train_pairwise_distillation"]
     train_per_term_scores = config["dynamic_teacher_per_term_scores"]
     teacher_pos_key = "pos_score"
@@ -250,7 +255,7 @@ if __name__ == "__main__":
     
     #
     # training / saving / validation loop
-    # -------------------------------
+    # -------------------------------    def get_mask(self)
     #
 
     scaler = torch.cuda.amp.GradScaler()
@@ -316,7 +321,7 @@ if __name__ == "__main__":
                 #
                 # train loop 
                 # -------------------------------
-                #
+                #optimi
                 i=0
                 lastRetryI=0
                 
@@ -391,9 +396,12 @@ if __name__ == "__main__":
                             with torch.cuda.amp.autocast(enabled=use_fp16):
                              if use_list_loss:
                                 label=batch["labels"]
-                                loss = ranking_loss_fn(scores, label)
+                                loss = ranking_loss_fn(scores, label, v=v.forward(i))
+                                v_loss = v_loss_fn(scores, label, v=v.forward(i))
+
                              elif train_pairwise_distillation:
-                                loss = ranking_loss_fn(ranking_score_pos, ranking_score_neg, batch[teacher_pos_key], batch[teacher_neg_key])
+                                loss = ranking_loss_fn(ranking_score_pos, ranking_score_neg, batch[teacher_pos_key], batch[teacher_neg_key], label=v.forward(i))
+                                v_loss = v_loss_fn(ranking_score_pos, ranking_score_neg, batch[teacher_pos_key], batch[teacher_neg_key], label=v.forward(i))
                                 if train_per_term_scores:
 
                                     per_term_output_pos = per_term_output_pos[batch["dyn_teacher_per_term_scores_pos"]>-1000]
@@ -406,12 +414,13 @@ if __name__ == "__main__":
                                     lt2 = (per_term_output_neg.mean(-1,keepdim=True).detach() - per_term_output_neg) - (per_term_labels_neg.mean(-1,keepdim=True) - per_term_labels_neg).detach()
 
                                     loss = loss + 1 * (torch.mean(torch.pow(lt1, 2)) + torch.mean(torch.pow(lt2, 2)))
-
+                                    v_loss = v_loss + 1 * (torch.mean(torch.pow(lt1, 2)) + torch.mean(torch.pow(lt2, 2)))
 
                                     #loss = loss + 0.2 * torch.mean(torch.pow((per_term_output_pos[:,0,:] - per_term_output_pos) - (batch["dyn_teacher_per_term_scores_pos"][:,0,:] - batch["dyn_teacher_per_term_scores_pos"]),2))
                                     #loss = loss + 0.2 * torch.mean(torch.pow((per_term_output_neg[:,0,:] - per_term_output_neg) - (batch["dyn_teacher_per_term_scores_neg"][:,0,:] - batch["dyn_teacher_per_term_scores_neg"]),2))
                              else:
-                                loss = ranking_loss_fn(ranking_score_pos, ranking_score_neg, label)
+                                loss = ranking_loss_fn(ranking_score_pos, ranking_score_neg, label, v=v.forward(i))
+                                v_loss = v_loss_fn(ranking_score_pos, ranking_score_neg, label, v=v.forward(i))
                                 
                             tensorboard_stats["PairwiseRankScore/Loss"]         += loss.detach().data
                             tensorboard_stats["PairwiseRankScore/pos_avg"]      += ranking_score_pos.detach().mean().data
@@ -420,18 +429,6 @@ if __name__ == "__main__":
                                 tensorboard_stats["PairwiseRankScore/score_diff"]   += (ranking_score_pos - ranking_score_neg).detach().mean().data
                                 tensorboard_stats["PairwiseRankScore/Accuracy"]     += (ranking_score_pos > ranking_score_neg).float().mean().detach().data
                            
-                            if "cluster_idx" in batch:
-                                loss_avg_running.add_entry(loss)
-                                if global_i > validate_every_n_batches:
-                                    r_avg = float(loss_avg_running.get_average())
-                                    per_sample_loss = torch.pow((ranking_score_pos - ranking_score_neg) - (batch[teacher_pos_key] - batch[teacher_neg_key]),2).detach().cpu()
-                                    local_per_cidx = defaultdict(list)
-                                    for c_i in range(len(batch["cluster_idx"])):
-                                        c_idx = int(batch["cluster_idx"][c_i])
-                                        local_per_cidx[c_idx].append(float(per_sample_loss[c_i]))
-                                    for c_idx,c_loss in local_per_cidx.items():
-                                        if len(c_loss) > 5: # filter out fill-up clusters (might be too noisy)
-                                            per_cluster_idx_diff[c_idx].append((sum(c_loss)/len(c_loss)) / r_avg)
                             #
                             # in-batch negative sampling, we combine it outside forward() to get a multi-gpu sync over the whole batch
                             # -> only select in-batch pairs that are not covered by the ranking loss above
@@ -470,6 +467,7 @@ if __name__ == "__main__":
                                                inbatch_loss_fn(expanded_pos_scores,ib_scores_neg_docs[ib_select],ib_label)) * 0.5
 
                                 loss = loss * config["in_batch_main_pair_lambda"] + ib_loss * config["in_batch_neg_lambda"]
+                                v_loss = v_loss * config["in_batch_main_pair_lambda"] + ib_loss * config["in_batch_neg_lambda"]
                                 #loss, weighted_losses = merge_loss([loss,ib_loss],log_var_mtl)
 
                                 tensorboard_stats["In-Batch/Loss"]         += ib_loss.detach().data
@@ -503,32 +501,40 @@ if __name__ == "__main__":
                                 tensorboard_stats["Sparsity/loss"] += sparsity_loss.detach().data
 
                                 loss = loss + (config["sparsity_loss_lambda_factor"] * sparsity_loss)
+                                v_loss = v_loss + (config["sparsity_loss_lambda_factor"] * sparsity_loss)
 
 
                             if use_fp16:
                                 scaler.scale(loss).backward()
+                                scaler.scale(v_loss).backward()
                                 if gradient_accumulation:
                                     if (1+i)%gradient_accumulation_steps == 0:
                                         scaler.step(optimizer)
+                                        scaler.step(v_optimizer)
                                         if use_embedding_optimizer:
                                             scaler.step(embedding_optimizer)
                                             embedding_optimizer.zero_grad()
                                         scaler.update()
                                         optimizer.zero_grad()
+                                        v_optimizer.zero_grad()
                                 else:
                                     scaler.unscale_(optimizer)
+                                    scaler.unscale_(v_optimizer)
                                     norm_temp = torch.nn.utils.clip_grad_norm_(model.parameters(), 10_000,error_if_nonfinite=False)
                                     if not torch.isnan(norm_temp):
                                         tensorboard_stats["Gradients/GradNorm"] += norm_temp.data.detach()
 
                                     scaler.step(optimizer)
+                                    scaler.step(v_optimizer)
                                     if use_embedding_optimizer:
                                         scaler.step(embedding_optimizer)
                                         embedding_optimizer.zero_grad()
                                     scaler.update()
                                     optimizer.zero_grad()
+                                    v_optimizer.zero_grad()
                             else:
                                 loss.backward()
+                                v_loss.backward()
                                 if gradient_accumulation:
                                     if (1+i)%gradient_accumulation_steps == 0:
                                         scaler.step(optimizer)
@@ -537,15 +543,18 @@ if __name__ == "__main__":
                                             embedding_optimizer.zero_grad()
                                         scaler.update()
                                         optimizer.zero_grad()
+                                        v_optimizer.zero_grad()
                                 else:
                                     norm_temp = torch.nn.utils.clip_grad_norm_(model.parameters(), 10_000,error_if_nonfinite=False)
                                     if not torch.isnan(norm_temp):
                                         tensorboard_stats["Gradients/GradNorm"] += norm_temp.data.detach()
                                     optimizer.step()
+                                    v_optimizer.step()
                                     if use_embedding_optimizer:
                                         embedding_optimizer.step()
                                         embedding_optimizer.zero_grad()
                                     optimizer.zero_grad()
+                                    v_optimizer.zero_grad()
 
                             # set the label back to a cached version (for next iterations)
                             if output_pos.shape[0] != training_batch_size:
@@ -585,7 +594,7 @@ if __name__ == "__main__":
                                 if i - lastRetryI < 4:
                                     raise r
 
-                                del loss,output_neg,output_pos,batch
+                                del loss, v_loss, output_neg,output_pos,batch
                                 gc.collect()
                                 torch.cuda.synchronize()
                                 torch.cuda.empty_cache()
@@ -704,9 +713,10 @@ if __name__ == "__main__":
         else:
             model_cpu = model.cpu() # we need this strange back and forth copy for models > 1/2 gpu memory, because load_state copies the state dict temporarily
 
-        del model, optimizer, all_params, we_params, lr_scheduler
+        del model, optimizer, v_optimizer, v, all_params, we_params, lr_scheduler
         if from_scratch:
             del loss
+            del v_loss
         if config["train_embedding"]:
             del embedding_optimizer
         gc.collect()
