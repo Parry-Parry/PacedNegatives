@@ -1,4 +1,0 @@
-# enable score loading & correct loss call
-train_pairwise_distillation: True
-# needs to be a distillation loss
-loss: "margin-mse"

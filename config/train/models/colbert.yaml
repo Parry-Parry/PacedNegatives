@@ -1,4 +1,0 @@
-model: ColBERT 
-
-colbert_compression_dim: 768
-query_augment_mask_number: -1
