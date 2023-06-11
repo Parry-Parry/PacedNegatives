@@ -6,6 +6,7 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 from transformers import AdamW
 import torch
 import torch.nn as nn
+from torch.nn import CrossEntropyLoss
 import os 
 from math import ceil
 import ir_datasets
@@ -76,6 +77,8 @@ def main(dataset : str,
     optimizer = AdamW(model.parameters(), lr=lr)
     if not meta_lr: meta_lr = lr
 
+    loss_fct = CrossEntropyLoss(ignore_index=-100, reduction='none')
+
     def iter_train_samples():    
             while True:
                 for row in df.itertuples():
@@ -109,8 +112,11 @@ def main(dataset : str,
                 logging.info('logits shape: %s', logits.shape)
                 logging.info('number of zeros: %s', torch.sum(v[b] == 0).item())
 
+                out_ids = out_ids.to(logits.device)
+                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+
                 K_loss = torch.sum(v[b]) / K
-                ce = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids.view(-1), reduction='none')
+                #ce = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids.view(-1), reduction='none')
 
                 loss = (C / torch.sum(v[b])) * torch.sum(ce * v[b]) - K_loss
                 grads = torch.autograd.grad(loss, v[b])
@@ -145,8 +151,11 @@ def main(dataset : str,
                 if spl:
                     logits = model(input_ids=inp_ids, labels=out_ids).logits
 
+                    out_ids = out_ids.to(logits.device)
+                    ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+
                     K_loss = torch.sum(v[b]) / K
-                    ce = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids.view(-1), reduction='none')
+                    #ce = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids.view(-1), reduction='none')
 
                     loss = (C / torch.sum(v[b])) * torch.sum(ce * v[b]) - K_loss
                     grads = torch.autograd.grad(loss, v[b])
