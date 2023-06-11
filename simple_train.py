@@ -110,9 +110,6 @@ def main(dataset : str,
             if spl:
                 logits = model(input_ids=inp_ids, labels=out_ids).logits
 
-                logging.info('logits shape: %s', logits.shape)
-                logging.info('number of zeros: %s', torch.sum(v[b] == 0).item())
-
                 out_ids = out_ids.to(logits.device)
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
 
@@ -120,7 +117,8 @@ def main(dataset : str,
                 #ce = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids.view(-1), reduction='none')
 
                 loss = (C / torch.sum(v[b])) * torch.sum(ce * v[b]) - K_loss
-                grads = torch.autograd.grad(loss, v[b])
+                logging.info('single batch v shape: %s', v[b].shape)
+                grads = torch.autograd.grad(loss, v[b], allow_unused=True)
                 v[i] = nn.functional.sigmoid(v[i] - meta_lr * grads[0])
                 del grads
             else:
