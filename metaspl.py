@@ -17,7 +17,6 @@ import logging
 from torch.autograd import Variable
 
 gen_param = lambda x, y : nn.Parameter(torch.Tensor([x]), requires_grad=y)
-gen_float = lambda x : torch.DoubleTensor(x).float()
 gen_var = lambda x, y : Variable(x, requires_grad=y)
 
 RND = 42
@@ -25,10 +24,7 @@ _C  = 50
 _K = 10e4 / _C
 OUTPUTS = ['true', 'false']
 
-def cross_entropy(logits, target):
-    logprobs = torch.nn.functional.log_softmax(logits.view(logits.shape[0], -1), dim=1)
-    batchloss = - torch.sum(target.view(target.shape[0], -1) * logprobs, dim=1)
-    return batchloss
+loss_fct = CrossEntropyLoss(ignore_index=-100, reduction='none')
 
 def process_dataset(dataset, cut=None):
     frame = pd.DataFrame(dataset.docpairs_iter())
@@ -42,26 +38,26 @@ def process_dataset(dataset, cut=None):
     return frame[['query', 'pid', 'nid']]
 
 class Weights(nn.Module):
-    def __init__(self, batches : int, batch_size : int, device, lr : float = 5e-5, mu : float = 1.3):
+    def __init__(self, batches : int, batch_size : int, device, mu : float = 1.3):
         super().__init__()
         self.v = nn.Parameter(torch.ones(batches, batch_size, requires_grad=True)).to(device)
         self.K = _K
         self.mu = mu
-        self.lr = lr
     
-    def forward(self, loss, batch_idx):
-        K_loss = torch.sum(self.v[batch_idx]) / self.K
-        grads = torch.autograd.grad(loss, self.v[batch_idx], allow_unused=True)
-        self.v[batch_idx] = nn.functional.sigmoid(self.v[batch_idx] - self.lr * grads[0])
-        del grads
-        return loss
+    def forward(self, batch_idx):
+        return - torch.sum(self.v[batch_idx]) / self.K
     
+    def set_weights(self, weights, batch_idx):
+        self.v[batch_idx] = weights
+
     def get_weights(self, batch_idx):
-        return self.v[batch_idx]
+        return gen_var(self.v[batch_idx], True)
     
-    def update(self):
+    def updateK(self):
         self.K = self.K * self.mu
 
+def load_t5(model_name : str = 't5-base'):
+    return T5ForConditionalGeneration.from_pretrained(model_name)
 
 torch.manual_seed(RND)
 _logger = ir_datasets.log.easy()
@@ -69,7 +65,6 @@ _logger = ir_datasets.log.easy()
 def main(dataset : str, 
          out_dir : str,
          model_name : str = 't5-base',
-         spl=False,
          epochs : int = 10, 
          batch_size : int = 128,
          lr : float = 5e-5,
@@ -80,7 +75,7 @@ def main(dataset : str,
     logs = {
         'dataset': dataset,
         'model_name': model_name,
-        'spl': spl,
+        'spl': True,
         'epochs': epochs,
         'batch_size': batch_size,
         'lr': lr,
@@ -95,14 +90,17 @@ def main(dataset : str,
     os.makedirs(out_dir, exist_ok=True)
     df  = process_dataset(ir_datasets.load(dataset), cut=cut)
     cut = len(df)
-    v = nn.Parameter(torch.ones(ceil(cut / batch_size), batch_size * 2, requires_grad=True)).cuda()
 
-    model = T5ForConditionalGeneration.from_pretrained(model_name).cuda()
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+    model = load_t5(model_name).to(device)
     tokenizer = T5Tokenizer.from_pretrained(model_name)
     optimizer = AdamW(model.parameters(), lr=lr)
-    if not meta_lr: meta_lr = lr
 
-    loss_fct = CrossEntropyLoss(ignore_index=-100, reduction='none')
+    C = _C / batch_size
+
+    if not meta_lr: meta_lr = lr
+    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device, lr=meta_lr, mu=mu)
 
     def iter_train_samples():    
             while True:
@@ -112,10 +110,6 @@ def main(dataset : str,
 
     start = time.time()
     train_iter = _logger.pbar(iter_train_samples(), desc='total train samples')
-
-    K = gen_param(_K).cuda()
-    mu = gen_param(mu).cuda()
-    C = gen_param(_C / batch_size).cuda()
 
     with _logger.pbar_raw(desc=f'train 1', total= cut // batch_size) as pbar:
         model.train()
@@ -128,28 +122,38 @@ def main(dataset : str,
                 inp.append(i)
                 out.append(o)
 
-            inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.cuda()
-            out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.cuda()
+            inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
+            out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
 
-            if spl:
-                logits = model(input_ids=inp_ids, labels=out_ids).logits
+            meta_model = load_t5(model_name).to(device)
+            meta_model.load_state_dict(model.state_dict())
 
-                out_ids = out_ids.to(logits.device)
-                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-                K_loss = torch.sum(v[b]) / K
-                #ce = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids.view(-1), reduction='none')
+            logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
+            v = weights.get_weights(b)
+            ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+            weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
+            meta_model.zero_grad()
+            grads = torch.autograd.grad(weighted_ce, (meta_model.params()),create_graph=True)
+            meta_model.update_params(lr_inner=meta_lr,source_params=grads)
+            del grads
 
-                loss = (C / torch.sum(v[b])) * torch.sum(ce * v[b]) - K_loss
-                grads = torch.autograd.grad(loss, v[b], allow_unused=True)
-                v[b] = nn.functional.sigmoid(v[b] - meta_lr * grads[0])
-                del grads
-            else:
-                loss = model(input_ids=inp_ids, labels=out_ids).loss
-            
-            loss.backward()
-            optimizer.step()
+            logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
+            ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) - weights.forward(b)
+            grads_v = torch.autograd.grad(ce, v)
+            v_ce = nn.functional.sigmoid(v - meta_lr * grads_v[0])
+            weights.set_weights(v_ce, b)
+            del grads_v
+
+            logits = model(input_ids=inp_ids, labels=out_ids).logits
+            ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+            with torch.no_grad():
+                v = weights.get_weights(b)
+            weighted_ce = torch.sum(ce * v) / torch.sum(v)
             optimizer.zero_grad()
-            total_loss = loss.item()
+            weighted_ce.backward()
+            optimizer.step()
+
+            total_loss = weighted_ce.item()
             count += 1
             pbar.update(1)
             pbar.set_postfix({'loss': total_loss/count})
@@ -166,34 +170,44 @@ def main(dataset : str,
                     i, o = next(train_iter)
                     inp.append(i)
                     out.append(o)
-                inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.cuda()
-                out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.cuda()
+                inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
+                out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
 
-                if spl:
-                    logits = model(input_ids=inp_ids, labels=out_ids).logits
+                meta_model = load_t5(model_name).to(device)
+                meta_model.load_state_dict(model.state_dict())
 
-                    out_ids = out_ids.to(logits.device)
-                    ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+                logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
+                v = weights.get_weights(b)
+                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+                weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
+                meta_model.zero_grad()
+                grads = torch.autograd.grad(weighted_ce, (meta_model.params()),create_graph=True)
+                meta_model.update_params(lr_inner=meta_lr,source_params=grads)
+                del grads
 
-                    K_loss = torch.sum(v[b]) / K
-                    #ce = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids.view(-1), reduction='none')
+                logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
+                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) - weights.forward(b)
+                grads_v = torch.autograd.grad(ce, v)
+                v_ce = nn.functional.sigmoid(v - meta_lr * grads_v[0])
+                weights.set_weights(v_ce, b)
+                del grads_v
 
-                    loss = (C / torch.sum(v[b])) * torch.sum(ce * v[b]) - K_loss
-                    logging.info('single batch v shape: %s', v[b].shape)
-                    grads = torch.autograd.grad(loss, v[b], allow_unused=True)
-                    v[b] = nn.functional.sigmoid(v[b] - meta_lr * grads[0])
-                    del grads
-                    K = K * mu
-                else:
-                    loss = model(input_ids=inp_ids, labels=out_ids).loss
-                
-                logs['K'][epoch].append(K.item())    
-                logs['loss'][epoch].append(loss.item())
-                logs['zeros'][epoch].append(torch.sum(v[b] == 0).item())
-                loss.backward()
-                optimizer.step()
+                logits = model(input_ids=inp_ids, labels=out_ids).logits
+                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+                with torch.no_grad():
+                    v = weights.get_weights(b)
+                weighted_ce = torch.sum(ce * v) / torch.sum(v)
                 optimizer.zero_grad()
-                total_loss = loss.item()
+                weighted_ce.backward()
+                optimizer.step()
+
+                weights.updateK()
+                total_loss += weighted_ce.item()
+
+                logs['K'][epoch].append(weights.K.item())    
+                logs['loss'][epoch].append(weighted_ce.item())
+                logs['zeros'][epoch].append(torch.sum(v == 0).item())
+            
                 count += 1
                 pbar.update(1)
                 pbar.set_postfix({'loss': total_loss/count})
