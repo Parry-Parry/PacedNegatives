@@ -56,8 +56,8 @@ def main(dataset : str,
         'cut': cut if cut else -1,
         'mu': mu,
         'loss' : defaultdict(list),
-        'K' : defaultdict(list) if spl else {},
-        'zeros' : defaultdict(list) if spl else {},
+        'K' : defaultdict(list),
+        'zeros' : defaultdict(list),
     }
 
     os.makedirs(out, exist_ok=True)
