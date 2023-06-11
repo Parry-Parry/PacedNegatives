@@ -21,7 +21,7 @@ OUTPUTS = ['true', 'false']
 def process_dataset(dataset, cut=None):
     frame = pd.DataFrame(dataset.docpairs_iter())
     docs = pd.DataFrame(dataset.docs_iter()).set_index('doc_id').text.to_dict()
-    queries = pd.DataFrame(ir_datasets.load(dataset).queries_iter()).set_index('query_id').text.to_dict()
+    queries = pd.DataFrame(dataset.queries_iter()).set_index('query_id').text.to_dict()
 
     frame['query'] = frame['query_id'].apply(lambda x: queries[x])
     frame['pid'] = frame['pos_doc_id'].apply(lambda x: docs[x])
@@ -59,9 +59,7 @@ def main(dataset : str,
     }
 
     os.makedirs(out, exist_ok=True)
-    
-    dataset = ir_datasets.load(dataset)
-    df  = process_dataset(dataset, cut=cut)
+    df  = process_dataset(ir_datasets.load(dataset), cut=cut)
     cut = len(df) * 2
     v = nn.parameter.Parameter(torch.ones(ceil(cut / batch_size), batch_size)).cuda()
 
