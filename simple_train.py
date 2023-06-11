@@ -14,7 +14,7 @@ import pickle
 import pandas as pd
 import logging
 
-gen_param = lambda x, : nn.Parameter(torch.Tensor([x]))
+gen_param = lambda x, : nn.Parameter(torch.Tensor([x], requires_grad=True))
 
 RND = 42
 _C  = 50
