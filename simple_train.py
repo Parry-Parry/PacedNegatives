@@ -89,10 +89,10 @@ def main(dataset : str,
     start = time.time()
     train_iter = _logger.pbar(iter_train_samples(), desc='total train samples')
 
-    K = gen_float(_K).cuda()
-    mu = gen_float(mu).cuda()
-    C = gen_float(_C / batch_size).cuda()
-    
+    K = gen_param(_K).cuda()
+    mu = gen_param(mu).cuda()
+    C = gen_param(_C / batch_size).cuda()
+
     with _logger.pbar_raw(desc=f'train 1', total= cut // batch_size) as pbar:
         model.train()
         total_loss = 0
