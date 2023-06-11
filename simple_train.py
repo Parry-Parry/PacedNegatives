@@ -61,6 +61,7 @@ def main(dataset : str,
     }
 
     os.makedirs(out, exist_ok=True)
+    logging.info(out)
     df  = process_dataset(ir_datasets.load(dataset), cut=cut)
     cut = len(df) * 2
     v = nn.Parameter(torch.ones(ceil(cut / batch_size), batch_size)).cuda()
