@@ -13,6 +13,8 @@ import pickle
 import pandas as pd
 import logging
 
+gen_param = lambda x : nn.Parameter(torch.Tensor([x]))
+
 RND = 42
 _C  = 50
 _K = 10e4 / _C
@@ -61,7 +63,7 @@ def main(dataset : str,
     os.makedirs(out, exist_ok=True)
     df  = process_dataset(ir_datasets.load(dataset), cut=cut)
     cut = len(df) * 2
-    v = nn.parameter.Parameter(torch.ones(ceil(cut / batch_size), batch_size)).cuda()
+    v = gen_param(torch.ones(ceil(cut / batch_size), batch_size)).cuda()
 
     model = T5ForConditionalGeneration.from_pretrained(model_name).cuda()
     tokenizer = T5Tokenizer.from_pretrained(model_name)
@@ -77,8 +79,8 @@ def main(dataset : str,
     start = time.time()
     train_iter = _logger.pbar(iter_train_samples(), desc='total train samples')
 
-    K = nn.parameter.Parameter(_K).cuda()
-    mu = nn.parameter.Parameter(mu).cuda()
+    K = gen_param(_K).cuda()
+    mu = gen_param(mu).cuda()
 
     C = _C / batch_size
     with _logger.pbar_raw(desc=f'train {epoch}', total= cut // batch_size) as pbar:
