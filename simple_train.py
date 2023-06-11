@@ -63,7 +63,7 @@ def main(dataset : str,
     os.makedirs(out, exist_ok=True)
     df  = process_dataset(ir_datasets.load(dataset), cut=cut)
     cut = len(df) * 2
-    v = gen_param(torch.ones(ceil(cut / batch_size), batch_size)).cuda()
+    v = nn.Parameter(torch.ones(ceil(cut / batch_size), batch_size)).cuda()
 
     model = T5ForConditionalGeneration.from_pretrained(model_name).cuda()
     tokenizer = T5Tokenizer.from_pretrained(model_name)
