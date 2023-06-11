@@ -14,7 +14,7 @@ import pickle
 import pandas as pd
 import logging
 
-gen_param = lambda x : nn.Parameter(torch.Tensor([x]))
+gen_param = lambda x, : nn.Parameter(torch.Tensor([x]))
 
 RND = 42
 _C  = 50
@@ -70,7 +70,7 @@ def main(dataset : str,
     os.makedirs(out_dir, exist_ok=True)
     df  = process_dataset(ir_datasets.load(dataset), cut=cut)
     cut = len(df)
-    v = nn.Parameter(torch.ones(ceil(cut / batch_size), batch_size * 2)).cuda()
+    v = nn.Parameter(torch.ones(ceil(cut / batch_size), batch_size * 2, requires_grad=True)).cuda()
 
     model = T5ForConditionalGeneration.from_pretrained(model_name).cuda()
     tokenizer = T5Tokenizer.from_pretrained(model_name)
