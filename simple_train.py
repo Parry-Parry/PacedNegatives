@@ -101,7 +101,7 @@ def main(dataset : str,
             logging.info(out_ids.shape)
 
             if spl:
-                logits = model(input_ids=inp_ids).logits
+                logits = model(input_ids=inp_ids, labels=out_ids).logits
                 K_loss = torch.sum(v[b]) / K
                 ce = nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids, reduction='none')
                 loss = (C / torch.sum(v[b])) * torch.sum(ce * v[b]) - K_loss
@@ -135,7 +135,7 @@ def main(dataset : str,
                 out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.cuda()
 
                 if spl:
-                    logits = model(input_ids=inp_ids).logits
+                    logits = model(input_ids=inp_ids, labels=out_ids).logits
                     loss = (C / torch.sum(v[b])) * torch.sum(nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), out_ids, reduction='none') * v[b]) - torch.sum(v[b]) / K
                     grads = torch.autograd.grad(loss, v[b])
                     v[i] = nn.functional.sigmoid(v[i] - meta_lr * grads[0])
