@@ -83,7 +83,7 @@ def main(dataset : str,
     mu = gen_param(mu).cuda()
 
     C = _C / batch_size
-    with _logger.pbar_raw(desc=f'train {epoch}', total= cut // batch_size) as pbar:
+    with _logger.pbar_raw(desc=f'train 1', total= cut // batch_size) as pbar:
         model.train()
         total_loss = 0
         count = 0
