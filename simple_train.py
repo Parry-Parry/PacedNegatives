@@ -24,8 +24,8 @@ def process_dataset(dataset, cut=None):
     queries = pd.DataFrame(dataset.queries_iter()).set_index('query_id').text.to_dict()
 
     frame['query'] = frame['query_id'].apply(lambda x: queries[x])
-    frame['pid'] = frame['pos_doc_id'].apply(lambda x: docs[x])
-    frame['nid'] = frame['neg_doc_id'].apply(lambda x: docs[x])
+    frame['pid'] = frame['doc_id_a'].apply(lambda x: docs[x])
+    frame['nid'] = frame['doc_id_b'].apply(lambda x: docs[x])
     if cut: frame = frame.sample(cut, random_state=RND) 
     return frame[['query', 'pid', 'nid']]
 
