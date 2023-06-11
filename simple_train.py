@@ -29,7 +29,7 @@ def process_dataset(dataset, cut=None):
     if cut: frame = frame.sample(cut, random_state=RND) 
     return frame[['query', 'pid', 'nid']]
 
-torch.manual_seed(0)
+torch.manual_seed(RND)
 _logger = ir_datasets.log.easy()
 
 def main(dataset : str, 
@@ -57,6 +57,8 @@ def main(dataset : str,
         'K' : defaultdict(list) if spl else {},
         'zeros' : defaultdict(list) if spl else {},
     }
+
+    os.makedirs(out, exist_ok=True)
     
     dataset = ir_datasets.load(dataset)
     df  = process_dataset(dataset, cut=cut)
@@ -96,7 +98,8 @@ def main(dataset : str,
             out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.cuda()
 
             if spl:
-                loss = C * torch.sum(nn.functional.cross_entropy(logits, out_ids, reduction='none') * v[b]) - torch.sum(v[b]) / K
+                logits = model(input_ids=inp_ids, labels=out_ids).logits
+                loss = (C / torch.sum(v[b])) * torch.sum(nn.functional.cross_entropy(logits, out_ids, reduction='none') * v[b]) - torch.sum(v[b]) / K
                 grads = torch.autograd.grad(loss, v[b])
                 v[i] = nn.functional.sigmoid(v[i] - meta_lr * grads[0])
                 del grads
