@@ -119,7 +119,7 @@ def main(dataset : str,
                 loss = (C / torch.sum(v[b])) * torch.sum(ce * v[b]) - K_loss
                 logging.info('single batch v shape: %s', v[b].shape)
                 grads = torch.autograd.grad(loss, v[b], allow_unused=True)
-                v[i] = nn.functional.sigmoid(v[i] - meta_lr * grads[0])
+                v[b] = nn.functional.sigmoid(v[b] - meta_lr * grads[0])
                 del grads
             else:
                 loss = model(input_ids=inp_ids, labels=out_ids).loss
