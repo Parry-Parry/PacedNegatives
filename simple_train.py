@@ -139,7 +139,7 @@ def main(dataset : str,
                 else:
                     loss = model(input_ids=inp_ids, labels=out_ids).loss
                 
-                logs['K']['epoch'].append(K.item())    
+                logs['K'][epoch].append(K.item())    
                 logs['loss'][epoch].append(loss.item())
                 logs['zeros'][epoch].append(torch.sum(v[b] == 0).item())
                 loss.backward()
