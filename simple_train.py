@@ -35,7 +35,7 @@ torch.manual_seed(RND)
 _logger = ir_datasets.log.easy()
 
 def main(dataset : str, 
-         out : str,
+         out_dir : str,
          model_name : str = 't5-base',
          spl=False,
          epochs : int = 10, 
@@ -60,8 +60,7 @@ def main(dataset : str,
         'zeros' : defaultdict(list),
     }
 
-    os.makedirs(out, exist_ok=True)
-    logging.info(out)
+    os.makedirs(out_dir, exist_ok=True)
     df  = process_dataset(ir_datasets.load(dataset), cut=cut)
     cut = len(df) * 2
     v = nn.Parameter(torch.ones(ceil(cut / batch_size), batch_size)).cuda()
@@ -153,10 +152,10 @@ def main(dataset : str,
         epoch += 1
 
     end = time.time() - start 
-    model.save_pretrained(os.path.join(out, 'model'))
-    with open(os.path.join(out, 'logs.json'), 'w') as f:
+    model.save_pretrained(os.path.join(out_dir, 'model'))
+    with open(os.path.join(out_dir, 'logs.json'), 'w') as f:
         json.dump(logs, f)
-    with open(os.path.join(out, 'time.pkl'), 'wb') as f:
+    with open(os.path.join(out_dir, 'time.pkl'), 'wb') as f:
         pickle.dump(end, f)
 
 if __name__=='__main__':
