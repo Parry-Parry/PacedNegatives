@@ -60,21 +60,35 @@ def update_params(model, lr, grads):
         set_param(model, name_t, tmp)
 
 class Weights(nn.Module):
+    weight = lambda x, y : (-y/x) + 1
     def __init__(self, eta : float, device = None, min=np.log(2), max=10, tight=False):
         super().__init__()
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
         self.eta = self.clamp(gen_param(eta, True)).to(device)
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.weight = lambda x, y : (-y / x) + 1 if tight else torch.ones(1).to(self.device)*self.eta
+        self.tight = tight
     
     def forward(self, loss, eta=None):
         weight = gen_var(torch.zeros(loss.size()), True)
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                weight[i] = torch.zeros(1).to(self.device) if eta else torch.zeros(1).to(self.device)*self.eta
+                val = torch.zeros(1).to(self.device)
+                if not eta:
+                    val = val * self.eta
+                weight[i] = val
             else:
-                weight[i] = self.weight(loss[i], eta) if eta else self.weight(loss[i], self.eta)
+                if eta:
+                    if self.tight:
+                        val = torch.ones(1).to(self.device) * eta
+                    else:
+                        val = (-loss[i]/eta) + 1
+                else:
+                    if self.tight:
+                        val = torch.ones(1).to(self.device) * self.eta
+                    else:
+                        val = (-loss[i]/self.eta) + 1 
+                weight[i] = val
         return weight
         
 
