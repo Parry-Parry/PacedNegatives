@@ -14,7 +14,7 @@ import pickle
 import pandas as pd
 import logging
 
-from torch.autograd import Variable
+from torch.autograd import Variable, grad
 
 gen_param = lambda x, y : nn.Parameter(torch.Tensor([x]), requires_grad=y)
 gen_var = lambda x, y : Variable(x, requires_grad=y)
@@ -37,6 +37,28 @@ def process_dataset(dataset, cut=None):
     if cut: frame = frame.sample(cut, random_state=RND) 
     return frame[['query', 'pid', 'nid']]
 
+def load_t5(model_name : str = 't5-base'):
+    return T5ForConditionalGeneration.from_pretrained(model_name)
+
+def set_param(curr_mod, name, param):
+        if '.' in name:
+            n = name.split('.')
+            module_name = n[0]
+            rest = '.'.join(n[1:])
+            for name, mod in curr_mod.named_children():
+                if module_name == name:
+                    set_param(mod, rest, param)
+                    break
+        else:
+            setattr(curr_mod, name, param)
+
+def update_params(model, lr, grads):
+    for tgt, src in zip(model.named_params(model), grads):
+        name_t, param_t = tgt
+        grad = src
+        tmp = param_t - lr * grad
+        model.set_param(model, name_t, tmp)
+
 class Weights(nn.Module):
     def __init__(self, batches : int, batch_size : int, device = None, mu : float = 1.3):
         super().__init__()
@@ -55,9 +77,6 @@ class Weights(nn.Module):
         
     def updateK(self):
         self.K = self.K * self.mu
-
-def load_t5(model_name : str = 't5-base'):
-    return T5ForConditionalGeneration.from_pretrained(model_name)
 
 torch.manual_seed(RND)
 _logger = ir_datasets.log.easy()
@@ -94,6 +113,7 @@ def main(dataset : str,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     model = load_t5(model_name).to(device)
+    meta_model = load_t5(model_name).to(device)
     tokenizer = T5Tokenizer.from_pretrained(model_name)
     optimizer = AdamW(model.parameters(), lr=lr)
 
@@ -116,7 +136,7 @@ def main(dataset : str,
         total_loss = 0
         count = 0
         for b in range(len(df) // batch_size):
-            inp, out = [], []
+            inp, out = [], []torch.autograd.
             for i in range(batch_size):
                 i, o = next(train_iter)
                 inp.append(i)
@@ -125,7 +145,6 @@ def main(dataset : str,
             inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
             out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
 
-            meta_model = load_t5(model_name).to(device)
             meta_model.load_state_dict(model.state_dict())
 
             logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
@@ -133,13 +152,13 @@ def main(dataset : str,
             ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
             weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
             meta_model.zero_grad()
-            grads = torch.autograd.grad(weighted_ce, (meta_model.params()),create_graph=True)
-            meta_model.update_params(lr_inner=meta_lr,source_params=grads)
+            grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
+            update_params(meta_model, lr=meta_lr, grads=grads)
             del grads
 
             logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
             ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) - weights.forward(b)
-            grads_v = torch.autograd.grad(ce, v)
+            grads_v = grad(ce, v)
             v_ce = nn.functional.sigmoid(v - meta_lr * grads_v[0])
             weights.set_weights(v_ce, b)
             del grads_v
@@ -177,7 +196,6 @@ def main(dataset : str,
                 inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
                 out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
 
-                meta_model = load_t5(model_name).to(device)
                 meta_model.load_state_dict(model.state_dict())
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
@@ -185,13 +203,13 @@ def main(dataset : str,
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
                 meta_model.zero_grad()
-                grads = torch.autograd.grad(weighted_ce, (meta_model.params()),create_graph=True)
-                meta_model.update_params(lr_inner=meta_lr,source_params=grads)
+                grads = grad(weighted_ce, (meta_model.parameters()),create_graph=True)
+                update_params(meta_model, lr=meta_lr, grads=grads)
                 del grads
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) - weights.forward(b)
-                grads_v = torch.autograd.grad(ce, v)
+                grads_v = grad(ce, v)
                 v_ce = nn.functional.sigmoid(v - meta_lr * grads_v[0])
                 weights.set_weights(v_ce, b)
                 del grads_v
