@@ -192,6 +192,7 @@ def main(dataset : str,
                 with torch.no_grad():
                     logits = model(input_ids=inp_ids, labels=out_ids).logits
                 v = weights.forward(b)
+                if b % 100 == 0: logging.info(f'v: {v}')
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) 
                 weighted_ce = C * torch.sum(ce * v) / torch.sum(v) - torch.sum(v) / weights.K
                 grads_v = grad(weighted_ce, v)
