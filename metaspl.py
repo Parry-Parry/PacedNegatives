@@ -100,7 +100,7 @@ def main(dataset : str,
     C = _C / batch_size
 
     if not meta_lr: meta_lr = lr
-    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device=device, lr=meta_lr, mu=mu)
+    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device=device, mu=mu)
 
     def iter_train_samples():    
             while True:
