@@ -20,8 +20,7 @@ gen_param = lambda x, y : nn.Parameter(torch.Tensor([x]), requires_grad=y)
 gen_var = lambda x, y : Variable(x, requires_grad=y)
 
 RND = 42
-_C  = 50
-_K = 10e4 / _C
+_K = 10e4
 OUTPUTS = ['true', 'false']
 
 loss_fct = CrossEntropyLoss(ignore_index=-100, reduction='none')
@@ -60,10 +59,10 @@ def update_params(model, lr, grads):
         set_param(model, name_t, tmp)
 
 class Weights(nn.Module):
-    def __init__(self, batches : int, batch_size : int, device = None, mu : float = 1.3):
+    def __init__(self, batches : int, batch_size : int, device = None, mu : float = 1.3, K : float = 10e4):
         super().__init__()
         self.v = nn.Parameter(torch.ones(batches, batch_size, requires_grad=True)).to(device)
-        self.K = _K
+        self.K = K
         self.mu = mu
 
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -73,7 +72,7 @@ class Weights(nn.Module):
         return gen_var(self.v[batch_idx], True)
     
     def set_weights(self, weights, batch_idx):
-        self.v[batch_idx] = weights
+        self.v[batch_idx] = weights.to(self.device)
         
     def updateK(self):
         self.K = self.K * self.mu
@@ -89,7 +88,8 @@ def main(dataset : str,
          lr : float = 5e-5,
          meta_lr : float = None,
          cut : int = None,
-         mu : float = 1.3):
+         mu : float = 1.3,
+         C : int = 5):
     
     logs = {
         'dataset': dataset,
@@ -117,10 +117,10 @@ def main(dataset : str,
     tokenizer = T5Tokenizer.from_pretrained(model_name)
     optimizer = AdamW(model.parameters(), lr=lr)
 
-    C = _C / batch_size
+    C = C / batch_size
 
     if not meta_lr: meta_lr = lr
-    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device=device, mu=mu)
+    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device=device, mu=mu, K=_K / batch_size)
 
     def iter_train_samples():    
             while True:
@@ -159,7 +159,7 @@ def main(dataset : str,
             logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
             ce = torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) - torch.sum(v) / weights.K
             grads_v = grad(ce, v)
-            v_ce = nn.functional.sigmoid(v - meta_lr * grads_v[0])
+            v_ce = ((v - meta_lr * grads_v[0]) < 0.5).type(torch.float32) 
             weights.set_weights(v_ce, b)
             del grads_v
 
@@ -211,7 +211,7 @@ def main(dataset : str,
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 ce = torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) - torch.sum(v) / weights.K
                 grads_v = grad(ce, v)
-                v_ce = nn.functional.sigmoid(v - meta_lr * grads_v[0])
+                v_ce = v_ce = ((v - meta_lr * grads_v[0]) < 0.5).type(torch.float32) 
                 weights.set_weights(v_ce, b)
                 del grads_v
 
