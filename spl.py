@@ -193,7 +193,7 @@ def main(dataset : str,
                     logits = model(input_ids=inp_ids, labels=out_ids).logits
                 v = weights.forward(b)
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) 
-                weighted_ce = C * torch.sum(ce * v) - torch.sum(v) / weights.K
+                weighted_ce = C * torch.mean(ce * v) - torch.sum(v) / weights.K
                 grads_v = grad(weighted_ce, v)
                 v_ce = v_ce = (nn.functional.sigmoid(v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
                 weights.set_weights(v_ce, b)
@@ -203,13 +203,13 @@ def main(dataset : str,
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 with torch.no_grad():
                     v = weights.forward(b)
-                if b % 100 == 0: logging.info(f'v {v}')
-                weighted_ce = C * torch.sum(ce * v) 
+                weighted_ce = C * torch.mean(ce * v) 
                 optimizer.zero_grad()
                 weighted_ce.backward()
                 optimizer.step()
 
                 weights.updateK()
+                if b % 100 == 0: logging.info(v)
                 total_loss += weighted_ce.item()
 
                 logs['K'][epoch].append(weights.K)    
