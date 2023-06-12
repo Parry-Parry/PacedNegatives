@@ -195,8 +195,10 @@ def main(dataset : str,
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) 
                 weighted_ce = C * torch.sum(ce * v) / torch.sum(v) - torch.sum(v) / weights.K
                 grads_v = grad(weighted_ce, v)
-                v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
-                if b % 100 == 0: logging.info(f'v: {v}')
+                raw_v_ce = v - meta_lr * grads_v[0]
+                v_ce = ((raw_v_ce) > 0.5).type(torch.float32) 
+                if b % 100 == 0: logging.info(f'v raw: {raw_v_ce}')
+                if b % 100 == 0: logging.info(f'v: {v_ce}')
                 weights.set_weights(v_ce, b)
                 del grads_v
 
