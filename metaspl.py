@@ -38,21 +38,21 @@ def process_dataset(dataset, cut=None):
     return frame[['query', 'pid', 'nid']]
 
 class Weights(nn.Module):
-    def __init__(self, batches : int, batch_size : int, device, mu : float = 1.3):
+    def __init__(self, batches : int, batch_size : int, device = None, mu : float = 1.3):
         super().__init__()
         self.v = nn.Parameter(torch.ones(batches, batch_size, requires_grad=True)).to(device)
         self.K = _K
         self.mu = mu
+
+        self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     def forward(self, batch_idx):
-        return - torch.sum(self.v[batch_idx]) / self.K
+        assert batch_idx < self.v.shape[0]
+        return gen_var(self.v[batch_idx], True)
     
     def set_weights(self, weights, batch_idx):
         self.v[batch_idx] = weights
-
-    def get_weights(self, batch_idx):
-        return gen_var(self.v[batch_idx], True)
-    
+        
     def updateK(self):
         self.K = self.K * self.mu
 
@@ -100,7 +100,7 @@ def main(dataset : str,
     C = _C / batch_size
 
     if not meta_lr: meta_lr = lr
-    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device, lr=meta_lr, mu=mu)
+    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device=device, lr=meta_lr, mu=mu)
 
     def iter_train_samples():    
             while True:
@@ -129,7 +129,7 @@ def main(dataset : str,
             meta_model.load_state_dict(model.state_dict())
 
             logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-            v = weights.get_weights(b)
+            v = weights.forward(b)
             ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
             weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
             meta_model.zero_grad()
