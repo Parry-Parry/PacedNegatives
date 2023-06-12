@@ -113,9 +113,9 @@ def main(dataset : str,
     start = time.time()
     train_iter = _logger.pbar(iter_train_samples(), desc='total train samples')
 
-    K = gen_param(_K).cuda()
-    mu = gen_param(mu).cuda()
-    C = gen_param(_C / batch_size).cuda()
+    K = _K
+    mu = mu
+    C = _C / batch_size
 
     with _logger.pbar_raw(desc=f'train 1', total= cut // batch_size) as pbar:
         model.train()
@@ -187,7 +187,7 @@ def main(dataset : str,
                 else:
                     loss = model(input_ids=inp_ids, labels=out_ids).loss
                 
-                logs['K'][epoch].append(K.item())    
+                logs['K'][epoch].append(K)  
                 logs['loss'][epoch].append(loss.item())
                 logs['zeros'][epoch].append(torch.sum(v[b] == 0).item())
                 loss.backward()
