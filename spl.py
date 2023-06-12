@@ -166,7 +166,7 @@ def main(dataset : str,
 
             logs['K'][0].append(weights.K)    
             logs['loss'][0].append(weighted_ce.item())
-            logs['zeros'][0].append(torch.sum(v == 0.).item())
+            logs['zeros'][0].append(torch.sum(v != 1.).item())
 
             total_loss += weighted_ce.item()
             count += 1
@@ -214,7 +214,7 @@ def main(dataset : str,
 
                 logs['K'][epoch].append(weights.K)    
                 logs['loss'][epoch].append(weighted_ce.item())
-                logs['zeros'][epoch].append(torch.sum(v == 0).item())
+                logs['zeros'][epoch].append(torch.sum(v != 1.).item())
             
                 count += 1
                 pbar.update(1)
