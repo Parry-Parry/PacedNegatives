@@ -90,6 +90,7 @@ def main(dataset : str,
          meta_lr : float = None,
          cut : int = None,
          eta : float = 5.0,
+         min_eta : float = 2,
          max_eta : float = 10.0,
          tight : bool = False):
     
@@ -118,7 +119,7 @@ def main(dataset : str,
     optimizer = AdamW(model.parameters(), lr=lr)
 
     if not meta_lr: meta_lr = lr
-    weights = Weights(eta, device=device, max=max_eta, tight=tight)
+    weights = Weights(eta, device=device, min=np.log(min_eta), max=max_eta, tight=tight)
 
     def iter_train_samples():    
             while True:
@@ -172,6 +173,9 @@ def main(dataset : str,
                 optimizer.step()
 
                 total_loss += weighted_ce.item()
+
+                if i % 100 == 0:
+                    logging.info(f'BATCH: {i} | Average v: {torch.mean(v).item()} | eta: {eta.item()}')
 
                 logs['eta'][epoch].append(eta.item())
                 logs['loss'][epoch].append(weighted_ce.item())
