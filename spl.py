@@ -150,7 +150,7 @@ def main(dataset : str,
             v = weights.forward(b)
             ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) 
             weighted_ce = C * torch.sum(ce * v) / torch.sum(v) - torch.sum(v) / weights.K
-            grads_v = grad(ce, v)
+            grads_v = grad(weighted_ce, v)
             v_ce = v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
             weights.set_weights(v_ce, b)
             del grads_v
@@ -185,7 +185,7 @@ def main(dataset : str,
                     i, o = next(train_iter)
                     inp.append(i)
                     out.append(o)
-                    
+
                 inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
                 out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
 
@@ -194,7 +194,7 @@ def main(dataset : str,
                 v = weights.forward(b)
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) 
                 weighted_ce = C * torch.sum(ce * v) / torch.sum(v) - torch.sum(v) / weights.K
-                grads_v = grad(ce, v)
+                grads_v = grad(weighted_ce, v)
                 v_ce = v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
                 weights.set_weights(v_ce, b)
                 del grads_v
