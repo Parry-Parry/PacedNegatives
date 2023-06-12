@@ -113,7 +113,6 @@ def main(dataset : str,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     model = load_t5(model_name).to(device)
-    meta_model = load_t5(model_name).to(device)
     tokenizer = T5Tokenizer.from_pretrained(model_name)
     optimizer = AdamW(model.parameters(), lr=lr)
 
@@ -146,20 +145,11 @@ def main(dataset : str,
             inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
             out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
 
-            meta_model.load_state_dict(model.state_dict())
-
-            logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
+            with torch.no_grad():
+                logits = model(input_ids=inp_ids, labels=out_ids).logits
             v = weights.forward(b)
-            if b % 100 == 0: logging.info('batch {b}: {v}'.format(b=b, v=v))
-            ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-            weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
-            meta_model.zero_grad()
-            grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
-            update_params(meta_model, lr=meta_lr, grads=grads)
-            del grads
-
-            logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-            ce = C * torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) #- torch.sum(v) / weights.K
+            ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) 
+            weighted_ce = C * torch.sum(ce * v) / torch.sum(v) - torch.sum(v) / weights.K
             grads_v = grad(ce, v)
             v_ce = v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
             weights.set_weights(v_ce, b)
@@ -195,23 +185,15 @@ def main(dataset : str,
                     i, o = next(train_iter)
                     inp.append(i)
                     out.append(o)
+                    
                 inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
                 out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
 
-                meta_model.load_state_dict(model.state_dict())
-
-                logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
+                with torch.no_grad():
+                    logits = model(input_ids=inp_ids, labels=out_ids).logits
                 v = weights.forward(b)
-                if b % 100 == 0: logging.info('batch {b}: {v}'.format(b=b, v=v))
-                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-                weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
-                meta_model.zero_grad()
-                grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
-                update_params(meta_model, lr=meta_lr, grads=grads)
-                del grads
-
-                logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-                ce = C * torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) - torch.sum(v) / weights.K
+                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) 
+                weighted_ce = C * torch.sum(ce * v) / torch.sum(v) - torch.sum(v) / weights.K
                 grads_v = grad(ce, v)
                 v_ce = v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
                 weights.set_weights(v_ce, b)
@@ -221,7 +203,7 @@ def main(dataset : str,
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 with torch.no_grad():
                     v = weights.forward(b)
-                weighted_ce = torch.sum(ce * v) / torch.sum(v)
+                weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
                 optimizer.zero_grad()
                 weighted_ce.backward()
                 optimizer.step()
