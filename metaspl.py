@@ -20,7 +20,6 @@ gen_param = lambda x, y : nn.Parameter(torch.Tensor([x]), requires_grad=y)
 gen_var = lambda x, y : Variable(x, requires_grad=y)
 
 RND = 42
-_K = 10e4
 OUTPUTS = ['true', 'false']
 
 loss_fct = CrossEntropyLoss(ignore_index=-100, reduction='none')
@@ -89,7 +88,8 @@ def main(dataset : str,
          meta_lr : float = None,
          cut : int = None,
          mu : float = 1.3,
-         C : int = 300):
+         C : int = 300,
+         K_order : int = 4,):
     
     logs = {
         'dataset': dataset,
@@ -118,6 +118,7 @@ def main(dataset : str,
     optimizer = AdamW(model.parameters(), lr=lr)
 
     C = C / batch_size
+    _K = 10**K_order
 
     if not meta_lr: meta_lr = lr
     weights = Weights(len(df) // batch_size, batch_size * 2, device=device, mu=mu, K=_K / C)
@@ -175,7 +176,7 @@ def main(dataset : str,
 
             logs['K'][0].append(weights.K)    
             logs['loss'][0].append(weighted_ce.item())
-            logs['zeros'][0].append(torch.sum(v == 0).item())
+            logs['zeros'][0].append(torch.sum(v == 0.).item())
 
             total_loss += weighted_ce.item()
             count += 1
