@@ -153,7 +153,11 @@ def main(dataset : str,
             weighted_ce.backward()
             optimizer.step()
 
-            total_loss = weighted_ce.item()
+            logs['K'][0].append(weights.K.item())    
+            logs['loss'][0].append(weighted_ce.item())
+            logs['zeros'][0].append(torch.sum(v == 0).item())
+
+            total_loss += weighted_ce.item()
             count += 1
             pbar.update(1)
             pbar.set_postfix({'loss': total_loss/count})
@@ -177,7 +181,7 @@ def main(dataset : str,
                 meta_model.load_state_dict(model.state_dict())
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-                v = weights.get_weights(b)
+                v = weights.forward(b)
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
                 meta_model.zero_grad()
@@ -195,7 +199,7 @@ def main(dataset : str,
                 logits = model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 with torch.no_grad():
-                    v = weights.get_weights(b)
+                    v = weights.forward(b)
                 weighted_ce = torch.sum(ce * v) / torch.sum(v)
                 optimizer.zero_grad()
                 weighted_ce.backward()
