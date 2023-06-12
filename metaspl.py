@@ -200,6 +200,7 @@ def main(dataset : str,
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 v = weights.forward(b)
+                logging.info('batch {b}: {v}'.format(b=b, v=v))
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
                 meta_model.zero_grad()
