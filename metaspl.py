@@ -53,7 +53,7 @@ def set_param(curr_mod, name, param):
             setattr(curr_mod, name, param)
 
 def update_params(model, lr, grads):
-    for tgt, src in zip(model.named_params(model), grads):
+    for tgt, src in zip(model.named_parameters(), grads):
         name_t, param_t = tgt
         grad = src
         tmp = param_t - lr * grad
