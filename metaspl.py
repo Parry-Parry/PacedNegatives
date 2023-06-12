@@ -147,7 +147,7 @@ def main(dataset : str,
             logits = model(input_ids=inp_ids, labels=out_ids).logits
             ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
             with torch.no_grad():
-                v = weights.get_weights(b)
+                v = weights.forward(b)
             weighted_ce = torch.sum(ce * v) / torch.sum(v)
             optimizer.zero_grad()
             weighted_ce.backward()
