@@ -57,7 +57,7 @@ def update_params(model, lr, grads):
         name_t, param_t = tgt
         grad = src
         tmp = param_t - lr * grad
-        model.set_param(model, name_t, tmp)
+        set_param(model, name_t, tmp)
 
 class Weights(nn.Module):
     def __init__(self, batches : int, batch_size : int, device = None, mu : float = 1.3):
@@ -136,7 +136,7 @@ def main(dataset : str,
         total_loss = 0
         count = 0
         for b in range(len(df) // batch_size):
-            inp, out = [], []torch.autograd.
+            inp, out = [], []
             for i in range(batch_size):
                 i, o = next(train_iter)
                 inp.append(i)
