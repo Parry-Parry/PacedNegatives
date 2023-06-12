@@ -56,7 +56,7 @@ def update_params(model, lr, grads):
     for tgt, src in zip(model.named_parameters(), grads):
         name_t, param_t = tgt
         grad = src
-        tmp = nn.parameter(param_t - lr * grad, requires_grad=True)
+        tmp = nn.Parameter(param_t - lr * grad, requires_grad=True)
         set_param(model, name_t, tmp)
 
 class Weights(nn.Module):
