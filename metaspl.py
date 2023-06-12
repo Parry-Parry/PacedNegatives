@@ -172,7 +172,7 @@ def main(dataset : str,
             weighted_ce.backward()
             optimizer.step()
 
-            logs['K'][0].append(weights.K.item())    
+            logs['K'][0].append(weights.K)    
             logs['loss'][0].append(weighted_ce.item())
             logs['zeros'][0].append(torch.sum(v == 0).item())
 
@@ -226,7 +226,7 @@ def main(dataset : str,
                 weights.updateK()
                 total_loss += weighted_ce.item()
 
-                logs['K'][epoch].append(weights.K.item())    
+                logs['K'][epoch].append(weights.K)    
                 logs['loss'][epoch].append(weighted_ce.item())
                 logs['zeros'][epoch].append(torch.sum(v == 0).item())
             
