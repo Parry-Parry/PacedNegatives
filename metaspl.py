@@ -66,29 +66,31 @@ class Weights(nn.Module):
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
         self.eta = self.clamp(gen_param(eta, True)).to(device)
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.tight = tight
-    
-    def forward(self, loss, eta=None):
+        self.weighting = lambda x, y : (-x/y) + 1 
+        self.forward = self.tight if tight else self.relaxed
+
+    def relaxed(self, loss, eta=None):
         weight = gen_var(torch.zeros(loss.size()), True)
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
                 val = torch.zeros(1).to(self.device)
-                if not eta:
-                    val = val * self.eta
-                weight[i] = val
+                weight[i] = val if eta else val * self.eta
             else:
-                if eta:
-                    if self.tight:
-                        val = torch.ones(1).to(self.device) * eta
-                    else:
-                        val = (-loss[i]/eta) + 1
-                else:
-                    if self.tight:
-                        val = torch.ones(1).to(self.device) * self.eta
-                    else:
-                        val = (-loss[i]/self.eta) + 1 
+                val = self.weighting(loss[i], eta) if eta else self.weighting(loss[i], self.eta)
                 weight[i] = val
+        return weight
+    
+    def tight(self, loss, eta=None):
+        weight = gen_var(torch.zeros(loss.size()), True)
+
+        for i in range(len(loss)):
+            if loss[i] > self.eta:
+                val = torch.zeros(1).to(self.device)
+                weight[i] = val if eta else val * self.eta
+            else:
+                val = torch.ones(1).to(self.device)
+                weight[i] = val if eta else val / self.eta
         return weight
         
 
@@ -160,7 +162,7 @@ def main(dataset : str,
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-                v = weights.forward(ce)
+                v = weights.forward(ce.data)
                 weighted_ce = torch.sum(ce * v) / len(ce)
                 weights.eta = weights.clamp(weights.eta)
                 meta_model.zero_grad()
