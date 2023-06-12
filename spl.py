@@ -195,8 +195,9 @@ def main(dataset : str,
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) 
                 weighted_ce = torch.sum(ce * v) / torch.sum(v) - torch.sum(v) / weights.K
                 grads_v = grad(weighted_ce, v)
-                v_ce = v_ce = (nn.functional.sigmoid(v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
+                v_ce = (nn.functional.sigmoid(v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
                 weights.set_weights(v_ce, b)
+                if b % 100 == 0: logging.info(f'K: {weights.K}, v: {torch.mean(v)}, v_ce: {torch.mean(v_ce)}')
                 del grads_v
 
                 logits = model(input_ids=inp_ids, labels=out_ids).logits
