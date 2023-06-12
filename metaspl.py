@@ -60,12 +60,12 @@ def update_params(model, lr, grads):
         set_param(model, name_t, tmp)
 
 class Weights(nn.Module):
-    def __init__(self, eta : float, device = None, min=np.log(2), max=10):
+    def __init__(self, eta : float, device = None, min=np.log(2), max=10, tight=False):
         super().__init__()
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
         self.eta = self.clamp(nn.parameter(torch.tensor([eta]), requires_grad=True)).to(device)
-
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.weight = lambda x, y : (-y / x) + 1 if tight else torch.ones(1).to(self.device)*self.eta
     
     def forward(self, loss, eta=None):
         weight = gen_var(torch.zeros(loss.size()), True)
@@ -74,7 +74,7 @@ class Weights(nn.Module):
             if loss[i] > self.eta:
                 weight[i] = torch.zeros(1).to(self.device) if eta else torch.zeros(1).to(self.device)*self.eta
             else:
-                weight[i] = (-loss[i] / eta) + 1 if eta else (-loss[i] / self.eta) + 1
+                weight[i] = self.weight(loss[i], eta) if eta else self.weight(loss[i], self.eta)
         return weight
         
 
@@ -90,7 +90,8 @@ def main(dataset : str,
          meta_lr : float = None,
          cut : int = None,
          eta : float = 5.0,
-         max_eta : float = 10.0,):
+         max_eta : float = 10.0,
+         tight : bool = False):
     
     logs = {
         'dataset': dataset,
@@ -117,7 +118,7 @@ def main(dataset : str,
     optimizer = AdamW(model.parameters(), lr=lr)
 
     if not meta_lr: meta_lr = lr
-    weights = Weights(eta, device=device, max=max_eta)
+    weights = Weights(eta, device=device, max=max_eta, tight=tight)
 
     def iter_train_samples():    
             while True:
