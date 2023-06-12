@@ -63,7 +63,7 @@ class Weights(nn.Module):
     def __init__(self, eta : float, device = None, min=np.log(2), max=10, tight=False):
         super().__init__()
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
-        self.eta = self.clamp(nn.parameter(torch.tensor([eta]), requires_grad=True)).to(device)
+        self.eta = self.clamp(gen_param(eta, True)).to(device)
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.weight = lambda x, y : (-y / x) + 1 if tight else torch.ones(1).to(self.device)*self.eta
     
