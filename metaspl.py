@@ -120,7 +120,7 @@ def main(dataset : str,
     C = C / batch_size
 
     if not meta_lr: meta_lr = lr
-    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device=device, mu=mu, K=_K / batch_size)
+    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device=device, mu=mu, K=_K / C)
 
     def iter_train_samples():    
             while True:
@@ -149,6 +149,7 @@ def main(dataset : str,
 
             logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
             v = weights.forward(b)
+            if b % 100 == 0: logging.info('batch {b}: {v}'.format(b=b, v=v))
             ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
             weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
             meta_model.zero_grad()
@@ -200,7 +201,7 @@ def main(dataset : str,
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 v = weights.forward(b)
-                logging.info('batch {b}: {v}'.format(b=b, v=v))
+                if b % 100 == 0: logging.info('batch {b}: {v}'.format(b=b, v=v))
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
                 meta_model.zero_grad()
