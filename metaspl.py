@@ -1,6 +1,8 @@
 from collections import defaultdict
 import json
 import time
+
+import numpy as np
 import fire 
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 from transformers import AdamW
@@ -58,23 +60,23 @@ def update_params(model, lr, grads):
         set_param(model, name_t, tmp)
 
 class Weights(nn.Module):
-    def __init__(self, batches : int, batch_size : int, device = None, mu : float = 1.3, K : float = 10e4):
+    def __init__(self, eta : float, device = None, min=np.log(2), max=10):
         super().__init__()
-        self.v = nn.Parameter(torch.ones(batches, batch_size, requires_grad=True)).to(device)
-        self.K = K
-        self.mu = mu
+        self.clamp = lambda x : torch.clamp(x, min=min, max=max)
+        self.eta = self.clamp(nn.parameter(torch.tensor([eta]), requires_grad=True)).to(device)
 
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    def forward(self, batch_idx):
-        assert batch_idx < self.v.shape[0]
-        return gen_var(self.v[batch_idx], True)
-    
-    def set_weights(self, weights, batch_idx):
-        self.v[batch_idx] = weights.to(self.device)
+    def forward(self, loss, eta=None):
+        weight = gen_var(torch.zeros(loss.size()), True)
+
+        for i in range(len(loss)):
+            if loss[i] > self.eta:
+                weight[i] = torch.zeros(1).to(self.device) if eta else torch.zeros(1).to(self.device)*self.eta
+            else:
+                weight[i] = (-loss[i] / eta) + 1 if eta else (-loss[i] / self.eta) + 1
+        return weight
         
-    def updateK(self):
-        self.K = self.K * (1 / self.mu)
 
 torch.manual_seed(RND)
 _logger = ir_datasets.log.easy()
@@ -87,9 +89,8 @@ def main(dataset : str,
          lr : float = 5e-5,
          meta_lr : float = None,
          cut : int = None,
-         mu : float = 1.3,
-         C : int = 300,
-         K_order : int = 4,):
+         eta : float = 5.0,
+         max_eta : float = 10.0,):
     
     logs = {
         'dataset': dataset,
@@ -100,15 +101,13 @@ def main(dataset : str,
         'lr': lr,
         'meta_lr': meta_lr if meta_lr else lr,
         'cut': cut if cut else -1,
-        'mu': mu,
+        'eta': defaultdict(list),
         'loss' : defaultdict(list),
-        'K' : defaultdict(list),
         'zeros' : defaultdict(list),
     }
 
     os.makedirs(out_dir, exist_ok=True)
     df  = process_dataset(ir_datasets.load(dataset), cut=cut)
-    cut = len(df)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -117,11 +116,8 @@ def main(dataset : str,
     tokenizer = T5Tokenizer.from_pretrained(model_name)
     optimizer = AdamW(model.parameters(), lr=lr)
 
-    C = C / batch_size
-    _K = 10**K_order
-
     if not meta_lr: meta_lr = lr
-    weights = Weights(len(df) // batch_size, batch_size * 2, device=device, mu=mu, K=_K / C)
+    weights = Weights(eta, device=device, max=max_eta)
 
     def iter_train_samples():    
             while True:
@@ -132,64 +128,10 @@ def main(dataset : str,
     start = time.time()
     train_iter = _logger.pbar(iter_train_samples(), desc='total train samples')
 
-    with _logger.pbar_raw(desc=f'train 1', total= cut // batch_size) as pbar:
-        model.train()
-        total_loss = 0
-        count = 0
-        for b in range(len(df) // batch_size):
-            inp, out = [], []
-            for i in range(batch_size):
-                i, o = next(train_iter)
-                inp.append(i)
-                out.append(o)
-
-            inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
-            out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
-
-            meta_model.load_state_dict(model.state_dict())
-
-            logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-            v = weights.forward(b)
-            if b % 100 == 0: logging.info('batch {b}: {v}'.format(b=b, v=v))
-            ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-            weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
-            meta_model.zero_grad()
-            grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
-            update_params(meta_model, lr=meta_lr, grads=grads)
-            del grads
-
-            logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-            ce = C * torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) #- torch.sum(v) / weights.K
-            grads_v = grad(ce, v)
-            v_ce = (nn.functional.sigmoid(v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
-            weights.set_weights(v_ce, b)
-            del grads_v
-
-            logits = model(input_ids=inp_ids, labels=out_ids).logits
-            ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-            with torch.no_grad():
-                v = weights.forward(b)
-            weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
-            optimizer.zero_grad()
-            weighted_ce.backward()
-            optimizer.step()
-
-            logs['K'][0].append(weights.K)    
-            logs['loss'][0].append(weighted_ce.item())
-            logs['zeros'][0].append(torch.sum(v == 0.).item())
-
-            total_loss += weighted_ce.item()
-            count += 1
-            pbar.update(1)
-            pbar.set_postfix({'loss': total_loss/count})
-    
-    logging.info('First Pass Complete')
-
-    for epoch in range(1, epochs):
-        with _logger.pbar_raw(desc=f'train {epoch}', total= cut // batch_size) as pbar:
+    for epoch in range(epochs):
+        with _logger.pbar_raw(desc=f'train {epoch}', total= len(df) // batch_size) as pbar:
             total_loss = 0
-            count = 0
-            for b in range(len(df) // batch_size):
+            for i in range(len(df) // batch_size):
                 inp, out = [], []
                 for i in range(batch_size):
                     i, o = next(train_iter)
@@ -201,41 +143,41 @@ def main(dataset : str,
                 meta_model.load_state_dict(model.state_dict())
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-                v = weights.forward(b)
-                if b % 100 == 0: logging.info('batch {b}: {v}'.format(b=b, v=v))
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-                weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
+                v = weights.forward(ce)
+                weighted_ce = torch.sum(ce * v) / len(ce)
+                weights.eta = weights.clamp(weights.eta)
                 meta_model.zero_grad()
                 grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
                 update_params(meta_model, lr=meta_lr, grads=grads)
                 del grads
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-                ce = C * torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) - torch.sum(v) / weights.K
-                grads_v = grad(ce, v)
-                v_ce = v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
-                weights.set_weights(v_ce, b)
-                del grads_v
+                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+                weighted_ce = torch.sum(ce * v) / len(ce)
+                grads_eta = grad(ce, weights.eta)
+                weights.eta = weights.eta - meta_lr * grads_eta[0]
+                del grads_eta
+
+                eta = weights.clamp(weights.eta)
 
                 logits = model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 with torch.no_grad():
-                    v = weights.forward(b)
-                weighted_ce = torch.sum(ce * v) / torch.sum(v)
+                    v = weights.forward(ce, eta)
+                weighted_ce = torch.sum(ce * v) / len(ce)
                 optimizer.zero_grad()
                 weighted_ce.backward()
                 optimizer.step()
 
-                weights.updateK()
                 total_loss += weighted_ce.item()
 
-                logs['K'][epoch].append(weights.K)    
+                logs['eta'][epoch].append(eta.item())
                 logs['loss'][epoch].append(weighted_ce.item())
                 logs['zeros'][epoch].append(torch.sum(v == 0).item())
             
-                count += 1
                 pbar.update(1)
-                pbar.set_postfix({'loss': total_loss/count})
+                pbar.set_postfix({'loss': total_loss / i+1})
         epoch += 1
 
     end = time.time() - start 
