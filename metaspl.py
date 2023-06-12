@@ -75,7 +75,7 @@ class Weights(nn.Module):
         self.v[batch_idx] = weights.to(self.device)
         
     def updateK(self):
-        self.K = self.K * self.mu
+        self.K = self.K * (1 / self.mu)
 
 torch.manual_seed(RND)
 _logger = ir_datasets.log.easy()
@@ -89,7 +89,7 @@ def main(dataset : str,
          meta_lr : float = None,
          cut : int = None,
          mu : float = 1.3,
-         C : int = 5):
+         C : int = 300):
     
     logs = {
         'dataset': dataset,
@@ -120,7 +120,7 @@ def main(dataset : str,
     C = C / batch_size
 
     if not meta_lr: meta_lr = lr
-    weights = Weights(ceil(len(df) / batch_size), batch_size * 2, device=device, mu=mu, K=_K / C)
+    weights = Weights(len(df) // batch_size, batch_size * 2, device=device, mu=mu, K=_K / C)
 
     def iter_train_samples():    
             while True:
@@ -158,9 +158,9 @@ def main(dataset : str,
             del grads
 
             logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-            ce = C * torch.sum(ce * v) / torch.sum(v) - torch.sum(v) / weights.K
+            ce = C * torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) - torch.sum(v) / weights.K
             grads_v = grad(ce, v)
-            v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
+            v_ce = v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
             weights.set_weights(v_ce, b)
             del grads_v
 
@@ -168,7 +168,7 @@ def main(dataset : str,
             ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
             with torch.no_grad():
                 v = weights.forward(b)
-            weighted_ce = torch.sum(ce * v) / torch.sum(v)
+            weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
             optimizer.zero_grad()
             weighted_ce.backward()
             optimizer.step()
@@ -210,7 +210,7 @@ def main(dataset : str,
                 del grads
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-                ce = torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) - torch.sum(v) / weights.K
+                ce = C * torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) - torch.sum(v) / weights.K
                 grads_v = grad(ce, v)
                 v_ce = v_ce = ((v - meta_lr * grads_v[0]) > 0.5).type(torch.float32) 
                 weights.set_weights(v_ce, b)
