@@ -203,12 +203,12 @@ def main(dataset : str,
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 weighted_ce = C * torch.sum(ce * v) / torch.sum(v)
                 meta_model.zero_grad()
-                grads = grad(weighted_ce, (meta_model.parameters()),create_graph=True)
+                grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
                 update_params(meta_model, lr=meta_lr, grads=grads)
                 del grads
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
-                ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1)) - weights.forward(b)
+                ce = torch.mean(loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))) - torch.sum(v) / weights.K
                 grads_v = grad(ce, v)
                 v_ce = nn.functional.sigmoid(v - meta_lr * grads_v[0])
                 weights.set_weights(v_ce, b)
