@@ -73,8 +73,7 @@ class Weights(nn.Module):
                 torch.Tensor([eta]).to(self.device),
                 requires_grad=True))
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
-        self.eta = self.clamp(self.eta_value)
-        self.eta = None
+        self.eta = self.clamp(self.eta_value).requires_grad()
         self.weighting = lambda x, y : (-x/y) + 1 
         self.forward = self.tight if tight else self.relaxed
         self.no_grad = self.no_grad_tight if tight else self.no_grad_relaxed
@@ -87,7 +86,7 @@ class Weights(nn.Module):
                 if loss[i] > eta:
                     pass
                 else:
-                    val = self.weighting(loss[i], eta) 
+                    val = self.weighting(loss[i], eta).requires_grad() 
                 weight[i] = val
             return weight
 
@@ -99,7 +98,7 @@ class Weights(nn.Module):
                 if loss[i] > eta:
                     pass
                 else:
-                    val = torch.ones(1).to(self.device) 
+                    val = torch.ones(1).to(self.device).requires_grad()
                 weight[i] = val 
             return weight
     
@@ -108,10 +107,9 @@ class Weights(nn.Module):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                val = weight[i] * self.eta
+                weight[i] = torch.zeros(1).to(self.device).requires_grad() * self.eta
             else:
-                val = self.weighting(loss[i], self.eta)
-            weight[i] = val
+                weight[i] = self.weighting(loss[i], self.eta).requires_grad()
         return weight
     
     def tight(self, loss):
@@ -119,10 +117,9 @@ class Weights(nn.Module):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                val = weight[i] * self.eta 
+                weight[i] = torch.zeros(1).to(self.device).requires_grad() * self.eta 
             else:
-                val = torch.ones(1).to(self.device) / self.eta
-            weight[i] = val 
+                weight[i] = torch.ones(1).to(self.device).requires_grad() / self.eta
         return weight
         
 
@@ -213,14 +210,16 @@ def main(dataset : str,
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 mean_ce = torch.sum(ce) / len(ce)
                 #weighted_ce = torch.sum(ce * v) / len(ce)
-                logging.info('eta grad %s', weights.eta.grad)
+                #logging.info('eta grad %s', weights.eta.grad)
                 #grads_eta = grad(mean_ce, weights.eta)
                 #weights.eta = weights.eta - meta_lr * grads_eta[0]
                 # use autograd backward to compute partial with respect to eta from mean_ce
                 mean_ce.backward(inputs=(weights.eta,), retain_graph=True)
                 #grads_eta = grad(mean_ce, weights.eta)
+                #weights.eta = weights.eta - meta_lr * grads_eta[0]
+                #torch.autograd.backward(mean_ce, inputs=(weights.eta,))
                 weights.eta = weights.eta - meta_lr * weights.eta.grad
-                #del grads_eta
+                del grads_eta
 
                 eta = weights.clamp(weights.eta)
 
