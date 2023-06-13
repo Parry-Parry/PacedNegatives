@@ -32,7 +32,7 @@ def process_dataset(dataset, cut=None):
     queries = pd.DataFrame(dataset.queries_iter()).set_index('query_id').text.to_dict()
 
     if cut: frame = frame.sample(cut, random_state=RND) 
-    
+
     frame['query'] = frame['query_id'].apply(lambda x: queries[x])
     frame['pid'] = frame['doc_id_a'].apply(lambda x: docs[x])
     frame['nid'] = frame['doc_id_b'].apply(lambda x: docs[x])
@@ -189,16 +189,22 @@ def main(dataset : str,
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 weights.eta = weights.clamp(weights.eta)
                 v = weights.forward(ce.data)
+
+                logging.info('eta grad %s', weights.eta.grad)
+
                 weighted_ce = torch.sum(ce * v) / len(ce)
                 meta_model.zero_grad()
                 grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
                 update_params(meta_model, lr=meta_lr, grads=grads)
                 del grads
 
+                logging.info('eta grad %s', weights.eta.grad)
+
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 mean_ce = torch.sum(ce) / len(ce)
                 #weighted_ce = torch.sum(ce * v) / len(ce)
+                logging.info('eta grad %s', weights.eta.grad)
                 grads_eta = grad(mean_ce, weights.eta)
                 weights.eta = weights.eta - meta_lr * grads_eta[0]
                 del grads_eta
