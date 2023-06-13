@@ -167,7 +167,7 @@ def main(dataset : str,
 
     if not meta_lr: meta_lr = lr
     weights = Weights(eta, device=device, min=np.log(min_eta), max=max_eta, tight=tight)
-    weights.eta = torch.Tensor(eta,requires_grad=True).to(device)
+    weights.eta = torch.Tensor([eta], requires_grad=True).to(device)
 
     def iter_train_samples():    
             while True:
