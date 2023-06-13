@@ -31,10 +31,12 @@ def process_dataset(dataset, cut=None):
     docs = pd.DataFrame(dataset.docs_iter()).set_index('doc_id').text.to_dict()
     queries = pd.DataFrame(dataset.queries_iter()).set_index('query_id').text.to_dict()
 
+    if cut: frame = frame.sample(cut, random_state=RND) 
+    
     frame['query'] = frame['query_id'].apply(lambda x: queries[x])
     frame['pid'] = frame['doc_id_a'].apply(lambda x: docs[x])
     frame['nid'] = frame['doc_id_b'].apply(lambda x: docs[x])
-    if cut: frame = frame.sample(cut, random_state=RND) 
+    
     return frame[['query', 'pid', 'nid']]
 
 def load_t5(model_name : str = 't5-base'):
