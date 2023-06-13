@@ -215,11 +215,10 @@ def main(dataset : str,
                 #grads_eta = grad(mean_ce, weights.eta)
                 #weights.eta = weights.eta - meta_lr * grads_eta[0]
                 # use autograd backward to compute partial with respect to eta from mean_ce
-                mean_ce.backward(retain_graph=True)
-                grads_eta = grad(mean_ce, weights.eta, retain_graph=True)
-                weights.eta = weights.eta - meta_lr * grads_eta[0]
-
-                del grads_eta
+                mean_ce.backward(inputs=(weights.eta,), retain_graph=True)
+                #grads_eta = grad(mean_ce, weights.eta)
+                weights.eta = weights.eta - meta_lr * weights.eta.grad
+                #del grads_eta
 
                 eta = weights.clamp(weights.eta)
 
