@@ -178,7 +178,7 @@ def main(dataset : str,
     for epoch in range(epochs):
         with _logger.pbar_raw(desc=f'train {epoch}', total= len(df) // batch_size) as pbar:
             total_loss = 0
-            for i in range(len(df) // batch_size):
+            for j in range(len(df) // batch_size):
                 inp, out = [], []
                 for i in range(batch_size):
                     i, o = next(train_iter)
@@ -236,8 +236,8 @@ def main(dataset : str,
 
                 total_loss += weighted_ce.item()
 
-                if i % 100 == 0:
-                    logging.info(f'BATCH: {i} | Average v: {torch.mean(v).item()} | eta: {eta.item()}')
+                if j % 100 == 0:
+                    logging.info(f'BATCH: {j} | Average v: {torch.mean(v).item()} | eta: {eta.item()}')
 
                 logs['eta'][epoch].append(eta.item())
                 logs['loss'][epoch].append(weighted_ce.item())
