@@ -193,8 +193,9 @@ def main(dataset : str,
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+                mean_ce = torch.sum(ce) / len(ce)
                 #weighted_ce = torch.sum(ce * v) / len(ce)
-                grads_eta = grad(ce, weights.eta)
+                grads_eta = grad(mean_ce, weights.eta)
                 weights.eta = weights.eta - meta_lr * grads_eta[0]
                 del grads_eta
 
