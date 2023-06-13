@@ -210,14 +210,14 @@ def main(dataset : str,
                 mean_ce = torch.sum(ce) / len(ce)
                 #weighted_ce = torch.sum(ce * v) / len(ce)
                 #logging.info('eta grad %s', weights.eta.grad)
-                #grads_eta = grad(mean_ce, weights.eta)
-                #weights.eta = weights.eta - meta_lr * grads_eta[0]
+                grads_eta = grad(mean_ce, weights.eta)
+                weights.eta = weights.eta - meta_lr * grads_eta[0]
                 # use autograd backward to compute partial with respect to eta from mean_ce
-                mean_ce.backward(inputs=(weights.eta,), retain_graph=True)
+                #mean_ce.backward(inputs=(weights.eta,), retain_graph=True)
                 #grads_eta = grad(mean_ce, weights.eta)
                 #weights.eta = weights.eta - meta_lr * grads_eta[0]
                 #torch.autograd.backward(mean_ce, inputs=(weights.eta,))
-                weights.eta = weights.eta - meta_lr * weights.eta.grad
+                #weights.eta = weights.eta - meta_lr * weights.eta.grad
                 del grads_eta
 
                 eta = weights.clamp(weights.eta)
