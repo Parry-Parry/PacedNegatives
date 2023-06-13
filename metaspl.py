@@ -227,6 +227,9 @@ def main(dataset : str,
                 weighted_ce.backward()
                 optimizer.step()
 
+                if j == 1: 
+                    logging.info(f'loss: {ce.item()} | v : {v}')
+
                 total_loss += weighted_ce.item()
 
                 if j % 100 == 0:
