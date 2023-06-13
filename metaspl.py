@@ -71,43 +71,40 @@ class Weights(nn.Module):
         self.no_grad = self.no_grad_tight if tight else self.no_grad_relaxed
 
     def no_grad_relaxed(self, loss, eta):
-        weight = gen_var(torch.zeros(loss.size()), True)
-        weight = weight.clone()
+        weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
 
         for i in range(len(loss)):
             if loss[i] > eta:
-                val = torch.zeros(1).to(self.device) 
+                pass
             else:
                 val = self.weighting(loss[i], eta) 
             weight[i] = val
-        return weight.to(self.device)
+        return weight
 
     def no_grad_tight(self, loss, eta):
-        weight = gen_var(torch.zeros(loss.size()), True)
-        weight = weight.clone()
+        weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
 
         for i in range(len(loss)):
             if loss[i] > eta:
-                val = torch.zeros(1).to(self.device) 
+                pass
             else:
                 val = torch.ones(1).to(self.device) 
             weight[i] = val 
-        return weight.to(self.device)
+        return weight
     
     def relaxed(self, loss):
-        weight = gen_var(torch.zeros(loss.size()), True)
-        weight = weight.clone()
+        weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                val = torch.zeros(1).to(self.device) * self.eta
+                val = val * self.eta
             else:
                 val = self.weighting(loss[i], self.eta)
             weight[i] = val
-        return weight.to(self.device)
+        return weight
     
-    def tight(self, loss, eta=None):
-        weight = gen_var(torch.zeros(loss.size()), True)
+    def tight(self, loss):
+        weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
         weight = weight.clone()
 
         for i in range(len(loss)):
@@ -116,7 +113,7 @@ class Weights(nn.Module):
             else:
                 val = torch.ones(1).to(self.device) / self.eta
             weight[i] = val 
-        return weight.to(self.device)
+        return weight
         
 
 torch.manual_seed(RND)
