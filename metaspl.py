@@ -184,9 +184,9 @@ def main(dataset : str,
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
+                weights.eta = weights.clamp(weights.eta)
                 v = weights.forward(ce.data)
                 weighted_ce = torch.sum(ce * v) / len(ce)
-                weights.eta = weights.clamp(weights.eta)
                 meta_model.zero_grad()
                 grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
                 update_params(meta_model, lr=meta_lr, grads=grads)
@@ -194,8 +194,8 @@ def main(dataset : str,
 
                 logits = meta_model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-                weighted_ce = torch.sum(ce * v) / len(ce)
-                grads_eta = grad(weighted_ce, weights.eta)
+                #weighted_ce = torch.sum(ce * v) / len(ce)
+                grads_eta = grad(ce, weights.eta)
                 weights.eta = weights.eta - meta_lr * grads_eta[0]
                 del grads_eta
 
