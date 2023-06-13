@@ -73,8 +73,8 @@ class Weights(nn.Module):
                 torch.Tensor([eta]).to(self.device),
                 requires_grad=True))
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
-        self.eta = self.clamp(self.eta_value).requires_grad()
-        self.weighting = lambda x, y : (-x/y.requires_grad_()) + 1 
+        self.eta = self.clamp(self.eta_value).requires_grad_()
+        self.weighting = lambda x, y : (-x/y) + 1 
         self.forward = self.tight if tight else self.relaxed
         self.no_grad = self.no_grad_tight if tight else self.no_grad_relaxed
 
