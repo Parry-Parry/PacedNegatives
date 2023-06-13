@@ -86,8 +86,7 @@ class Weights(nn.Module):
                 if loss[i] > eta:
                     pass
                 else:
-                    val = self.weighting(loss[i], eta)
-                weight[i] = val
+                    weight[i]  = self.weighting(loss[i], eta)
             return weight
 
     def no_grad_tight(self, loss, eta):
