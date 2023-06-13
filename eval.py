@@ -22,4 +22,4 @@ def main(model_dir : str, out : str, eval_name : str):
     return "Success!"
 
 if __name__ == '__main__':
-    fire.Fire(main)
+    fire.Fire(main) 

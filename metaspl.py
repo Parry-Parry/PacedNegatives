@@ -19,7 +19,6 @@ import logging
 
 from torch.autograd import Variable, grad
 
-gen_param = lambda x, y : nn.Parameter(torch.Tensor([x]), requires_grad=y)
 gen_var = lambda x, y : Variable(x, requires_grad=y)
 
 RND = 42
@@ -119,6 +118,13 @@ class Weights(nn.Module):
             else:
                 weight[i] = torch.ones(1).to(self.device).requires_grad_() / self.eta
         return weight
+    
+def adjust_lr(optimizer, init_lr, total_epochs):
+    def update(epoch):
+        lr = init_lr * ((0.2 ** int(epoch >= total_epochs * 1/4)) * (0.2 ** int(epoch >= total_epochs * 1/2))* (0.2 ** int(epoch >= total_epochs * 3/4)))
+        for param_group in optimizer.param_groups:
+            param_group['lr'] = lr
+    return update
         
 
 torch.manual_seed(RND)
@@ -161,6 +167,7 @@ def main(dataset : str,
     meta_model = load_t5(model_name).to(device)
     tokenizer = T5Tokenizer.from_pretrained(model_name)
     optimizer = AdamW(model.parameters(), lr=lr)
+    update_lr = adjust_lr(optimizer, lr, epochs)
 
     if not meta_lr: meta_lr = lr
     weights = Weights(eta, device=device, min=np.log(min_eta), max=max_eta, tight=tight)
@@ -199,6 +206,7 @@ def main(dataset : str,
                 weighted_ce = torch.sum(ce * v) / len(ce)
                 meta_model.zero_grad()
                 grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True, retain_graph=True)
+                meta_lr = lr * ((0.1 ** int(epoch >= epochs * 1/4)) * (0.1 ** int(epoch >= epochs * 1/2)))
                 update_params(meta_model, lr=meta_lr, grads=grads)
                 del grads
 
@@ -230,6 +238,8 @@ def main(dataset : str,
             
                 pbar.update(1)
                 pbar.set_postfix({'loss': total_loss / (j+1)})
+
+        update_lr(epoch)
         epoch += 1
 
     end = time.time() - start 
