@@ -14,8 +14,8 @@ def main(model_dir : str, out : str, eval_name : str):
     models = {store : bm25 >> pt.text.get_text(dataset, "text") >> MonoT5ReRanker(model=join(model_dir, store, 'model')) for store in models}
     
     eval = pt.get_dataset(eval_name)
-    res = pt.Experiment(list(models.values()), eval.get_topics(), eval.get_qrels(), eval_metrics=["map", "ndcg_cut_10", "mrr"], names = list(models.keys()), baseline = 0)
-    qres = pt.Experiment(list(models.values()), eval.get_topics(), eval.get_qrels(), eval_metrics=["map", "ndcg_cut_10", "mrr"], names = list(models.keys()), baseline = 0, perquery=True)
+    res = pt.Experiment(list(models.values()), eval.get_topics(), eval.get_qrels(), eval_metrics=["map", "ndcg_cut_10", "recip_rank"], names = list(models.keys()), baseline = 0)
+    qres = pt.Experiment(list(models.values()), eval.get_topics(), eval.get_qrels(), eval_metrics=["map", "ndcg_cut_10", "recip_rank"], names = list(models.keys()), baseline = 0, perquery=True)
     os.makedirs(out, exist_ok=True)
     res.to_csv(join(out, "results.csv"))
     qres.to_csv(join(out, "perqueryresults.csv"))
