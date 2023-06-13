@@ -71,26 +71,28 @@ class Weights(nn.Module):
         self.no_grad = self.no_grad_tight if tight else self.no_grad_relaxed
 
     def no_grad_relaxed(self, loss, eta):
-        weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
+        with torch.no_grad():
+            weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
 
-        for i in range(len(loss)):
-            if loss[i] > eta:
-                pass
-            else:
-                val = self.weighting(loss[i], eta) 
-            weight[i] = val
-        return weight
+            for i in range(len(loss)):
+                if loss[i] > eta:
+                    pass
+                else:
+                    val = self.weighting(loss[i], eta) 
+                weight[i] = val
+            return weight
 
     def no_grad_tight(self, loss, eta):
-        weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
+        with torch.no_grad():
+            weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
 
-        for i in range(len(loss)):
-            if loss[i] > eta:
-                pass
-            else:
-                val = torch.ones(1).to(self.device) 
-            weight[i] = val 
-        return weight
+            for i in range(len(loss)):
+                if loss[i] > eta:
+                    pass
+                else:
+                    val = torch.ones(1).to(self.device) 
+                weight[i] = val 
+            return weight
     
     def relaxed(self, loss):
         weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
@@ -203,8 +205,7 @@ def main(dataset : str,
 
                 logits = model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
-                with torch.no_grad():
-                    v = weights.no_grad(ce, eta)
+                v = weights.no_grad(ce, eta)
                 weighted_ce = torch.sum(ce * v) / len(ce)
                 optimizer.zero_grad()
                 weighted_ce.backward()
