@@ -97,7 +97,7 @@ class Weights(nn.Module):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                val = val * self.eta
+                val = weight[i] * self.eta
             else:
                 val = self.weighting(loss[i], self.eta)
             weight[i] = val
@@ -105,11 +105,10 @@ class Weights(nn.Module):
     
     def tight(self, loss):
         weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
-        weight = weight.clone()
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                val =  torch.zeros(1).to(self.device) * self.eta
+                val = weight[i] * self.eta 
             else:
                 val = torch.ones(1).to(self.device) / self.eta
             weight[i] = val 
