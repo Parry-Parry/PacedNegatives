@@ -191,6 +191,8 @@ def main(dataset : str,
                     out.append(o)
                 inp_ids = tokenizer(inp, return_tensors='pt', padding=True).input_ids.to(device)
                 out_ids = tokenizer(out, return_tensors='pt', padding=True).input_ids.to(device)
+                inp_ids = Variable(inp_ids, requires_grad=False)
+                out_ids = Variable(out_ids, requires_grad=False)
 
                 meta_model.load_state_dict(model.state_dict())
 
