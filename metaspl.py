@@ -244,7 +244,7 @@ def main(dataset : str,
                 logs['zeros'][epoch].append(torch.sum(v == 0).item())
             
                 pbar.update(1)
-                pbar.set_postfix({'loss': total_loss / j+1})
+                pbar.set_postfix({'loss': total_loss / (j+1)})
         epoch += 1
 
     end = time.time() - start 
