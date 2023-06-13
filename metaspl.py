@@ -65,9 +65,15 @@ class Weights(nn.Module):
     weight = lambda x, y : (-y/x) + 1
     def __init__(self, eta : float, device = None, min=np.log(2), max=10, tight=False):
         super().__init__()
-        self.clamp = lambda x : torch.clamp(x, min=min, max=max)
-        self.eta = self.clamp(gen_param(eta, True)).to(device)
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.register_parameter(
+            'eta_value',
+            torch.nn.Parameter(
+                torch.Tensor([eta]).to(self.device),
+                requires_grad=True))
+        self.clamp = lambda x : torch.clamp(x, min=min, max=max)
+        self.eta = self.clamp(self.eta_value)
+        self.eta = None
         self.weighting = lambda x, y : (-x/y) + 1 
         self.forward = self.tight if tight else self.relaxed
         self.no_grad = self.no_grad_tight if tight else self.no_grad_relaxed
@@ -161,6 +167,7 @@ def main(dataset : str,
 
     if not meta_lr: meta_lr = lr
     weights = Weights(eta, device=device, min=np.log(min_eta), max=max_eta, tight=tight)
+    weights.eta = torch.Tensor(eta,requires_grad=True).to(device)
 
     def iter_train_samples():    
             while True:
@@ -190,11 +197,9 @@ def main(dataset : str,
                 weights.eta = weights.clamp(weights.eta)
                 v = weights.forward(ce.data)
 
-                logging.info('eta grad %s', weights.eta.grad)
-
                 weighted_ce = torch.sum(ce * v) / len(ce)
                 meta_model.zero_grad()
-                grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True)
+                grads = grad(weighted_ce, (meta_model.parameters()), create_graph=True, retain_graph=True)
                 update_params(meta_model, lr=meta_lr, grads=grads)
                 del grads
 
