@@ -86,7 +86,7 @@ class Weights(nn.Module):
                 if loss[i] > eta:
                     pass
                 else:
-                    val = self.weighting(loss[i], eta).requires_grad() 
+                    val = self.weighting(loss[i], eta)
                 weight[i] = val
             return weight
 
@@ -98,8 +98,7 @@ class Weights(nn.Module):
                 if loss[i] > eta:
                     pass
                 else:
-                    val = torch.ones(1).to(self.device).requires_grad()
-                weight[i] = val 
+                    weight[i] = torch.ones(1).to(self.device)
             return weight
     
     def relaxed(self, loss):
@@ -107,9 +106,9 @@ class Weights(nn.Module):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                weight[i] = torch.zeros(1).to(self.device).requires_grad() * self.eta
+                weight[i] = torch.zeros(1).to(self.device).requires_grad_() * self.eta
             else:
-                weight[i] = self.weighting(loss[i], self.eta).requires_grad()
+                weight[i] = self.weighting(loss[i], self.eta).requires_grad_()
         return weight
     
     def tight(self, loss):
@@ -117,9 +116,9 @@ class Weights(nn.Module):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                weight[i] = torch.zeros(1).to(self.device).requires_grad() * self.eta 
+                weight[i] = torch.zeros(1).to(self.device).requires_grad_() * self.eta 
             else:
-                weight[i] = torch.ones(1).to(self.device).requires_grad() / self.eta
+                weight[i] = torch.ones(1).to(self.device).requires_grad_() / self.eta
         return weight
         
 
