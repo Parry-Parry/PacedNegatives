@@ -71,7 +71,7 @@ class Weights(nn.Module):
         self.no_grad = self.no_grad_tight if tight else self.no_grad_relaxed
 
     def no_grad_relaxed(self, loss, eta):
-        weight = gen_var(torch.zeros(loss.size()), True)
+        weight = torch.zeros(loss.size())
 
         for i in range(len(loss)):
             if loss[i] > eta:
@@ -79,10 +79,10 @@ class Weights(nn.Module):
             else:
                 val = self.weighting(loss[i], eta) 
             weight[i] = val
-        return weight
+        return gen_var(weight, True)
 
     def no_grad_tight(self, loss, eta):
-        weight = gen_var(torch.zeros(loss.size()), True)
+        weight = torch.zeros(loss.size())
 
         for i in range(len(loss)):
             if loss[i] > eta:
@@ -90,10 +90,10 @@ class Weights(nn.Module):
             else:
                 val = torch.ones(1).to(self.device) 
             weight[i] = val 
-        return weight
+        return gen_var(weight, True)
     
     def relaxed(self, loss):
-        weight = gen_var(torch.zeros(loss.size()), True)
+        weight = torch.zeros(loss.size())
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
@@ -101,10 +101,11 @@ class Weights(nn.Module):
             else:
                 val = self.weighting(loss[i], self.eta)
             weight[i] = val
-        return weight
+        return gen_var(weight, True)
     
     def tight(self, loss, eta=None):
-        weight = gen_var(torch.zeros(loss.size()), True)
+        #weight = gen_var(torch.zeros(loss.size()), True)
+        weight = torch.zeros(loss.size())
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
@@ -112,7 +113,7 @@ class Weights(nn.Module):
             else:
                 val = torch.ones(1).to(self.device) / self.eta
             weight[i] = val 
-        return weight
+        return gen_var(weight, True)
         
 
 torch.manual_seed(RND)
