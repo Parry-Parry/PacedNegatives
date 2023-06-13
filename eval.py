@@ -9,7 +9,7 @@ from pyterrier_t5 import MonoT5ReRanker
 
 def main(model_dir : str, out : str, eval_name : str):  
     dataset = pt.get_dataset("irds:msmarco-passage/train/triples-small")
-    bm25 = pt.BatchRetrieve(pt.get_dataset("msmarco_passage").get_index("train"), wmodel="BM25")
+    bm25 = pt.BatchRetrieve(pt.get_dataset("msmarco_passage").get_index("terrier_stemmed_text"), wmodel="BM25")
     models = ['t5baseline16', 't5spl3']
     models = {store : bm25 >> pt.text.get_text(dataset, "text") >> MonoT5ReRanker(model=join(model_dir, store, 'model')) for store in models}
     
