@@ -9,6 +9,7 @@ from transformers import AdamW
 import torch
 import torch.nn as nn
 from torch.nn import CrossEntropyLoss
+import torch.backends.cudnn as cudnn
 import os 
 from math import ceil
 import ir_datasets
@@ -159,6 +160,7 @@ def main(dataset : str,
     df  = process_dataset(ir_datasets.load(dataset), cut=cut)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    cudnn.benchmark = True
 
     model = load_t5(model_name).to(device)
     meta_model = load_t5(model_name).to(device)
@@ -167,7 +169,7 @@ def main(dataset : str,
 
     if not meta_lr: meta_lr = lr
     weights = Weights(eta, device=device, min=np.log(min_eta), max=max_eta, tight=tight)
-    weights.eta = torch.Tensor([eta], requires_grad=True).to(device)
+    weights.eta = torch.tensor([eta], requires_grad=True).to(device)
 
     def iter_train_samples():    
             while True:
@@ -210,8 +212,13 @@ def main(dataset : str,
                 mean_ce = torch.sum(ce) / len(ce)
                 #weighted_ce = torch.sum(ce * v) / len(ce)
                 logging.info('eta grad %s', weights.eta.grad)
-                grads_eta = grad(mean_ce, weights.eta)
+                #grads_eta = grad(mean_ce, weights.eta)
+                #weights.eta = weights.eta - meta_lr * grads_eta[0]
+                # use autograd backward to compute partial with respect to eta from mean_ce
+                mean_ce.backward(retain_graph=True)
+                grads_eta = grad(mean_ce, weights.eta, retain_graph=True)
                 weights.eta = weights.eta - meta_lr * grads_eta[0]
+
                 del grads_eta
 
                 eta = weights.clamp(weights.eta)
