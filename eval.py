@@ -6,11 +6,12 @@ from os.path import join
 import torch 
 from pyterrier_t5 import MonoT5ReRanker
 
-def main(model_dir : str, output_dir : str, corpus_dir : str, eval_name : str):
-    index = pt.IndexFactory.of(corpus_dir)
-    bm25 = pt.BatchRetrieve(index, wmodel="BM25")
+models = ['t5baseline16', 't5spl3']
 
-    models = {store : bm25 > MonoT5ReRanker(model=join(model_dir, store)) for store in os.listdir(model_dir)}
+def main(model_dir : str, output_dir : str, corpus : str, eval_name : str):
+    bm25 = pt.BatchRetrieve.from_dataset(corpus, 'terrier_stemmed_text', wmodel="BM25", metadata=['docno', 'text'])
+
+    models = {store : bm25 > MonoT5ReRanker(model=join(model_dir, store, 'model')) for store in models}
     
     dataset = pt.get_dataset(eval_name)
     res = pt.Experiment(models.values(), dataset.get_topics(), dataset.get_qrels(), eval_metrics=["map", "nDCG@10", "mrr"], names = models.keys(), baseline = 0)
