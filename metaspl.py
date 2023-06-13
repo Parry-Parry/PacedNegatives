@@ -68,17 +68,39 @@ class Weights(nn.Module):
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.weighting = lambda x, y : (-x/y) + 1 
         self.forward = self.tight if tight else self.relaxed
+        self.no_grad = self.no_grad_tight if tight else self.no_grad_relaxed
 
-    def relaxed(self, loss, eta=None):
+    def no_grad_relaxed(self, loss, eta):
+        weight = gen_var(torch.zeros(loss.size()), True)
+
+        for i in range(len(loss)):
+            if loss[i] > eta:
+                val = torch.zeros(1).to(self.device) 
+            else:
+                val = self.weighting(loss[i], eta) 
+            weight[i] = val
+        return weight
+
+    def no_grad_tight(self, loss, eta):
+        weight = gen_var(torch.zeros(loss.size()), True)
+
+        for i in range(len(loss)):
+            if loss[i] > eta:
+                val = torch.zeros(1).to(self.device) 
+            else:
+                val = torch.ones(1).to(self.device) 
+            weight[i] = val 
+        return weight
+    
+    def relaxed(self, loss):
         weight = gen_var(torch.zeros(loss.size()), True)
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                val = torch.zeros(1).to(self.device)
-                weight[i] = val if eta else val * self.eta
+                val = torch.zeros(1).to(self.device) * self.eta
             else:
-                val = self.weighting(loss[i], eta) if eta else self.weighting(loss[i], self.eta)
-                weight[i] = val
+                val = self.weighting(loss[i], self.eta)
+            weight[i] = val
         return weight
     
     def tight(self, loss, eta=None):
@@ -86,11 +108,10 @@ class Weights(nn.Module):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                val = torch.zeros(1).to(self.device)
-                weight[i] = val if eta else val * self.eta
+                val =  torch.zeros(1).to(self.device) * self.eta
             else:
-                val = torch.ones(1).to(self.device)
-                weight[i] = val if eta else val / self.eta
+                val = torch.ones(1).to(self.device) / self.eta
+            weight[i] = val 
         return weight
         
 
@@ -182,7 +203,7 @@ def main(dataset : str,
                 logits = model(input_ids=inp_ids, labels=out_ids).logits
                 ce = loss_fct(logits.view(-1, logits.size(-1)), out_ids.view(-1))
                 with torch.no_grad():
-                    v = weights.forward(ce, eta)
+                    v = weights.no_grad(ce, eta)
                 weighted_ce = torch.sum(ce * v) / len(ce)
                 optimizer.zero_grad()
                 weighted_ce.backward()
