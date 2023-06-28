@@ -11,12 +11,13 @@ class adhocRestructure:
         scored = self.model.score(tmp_frame)
         return scored.sort_values('score', ascending=False).doc_id.tolist()
 
-def collapse_triples(triples, model, corpus):
+def collapse_triples(triples, model, corpus, num_docs=10):
     """
     Collapses triples dataframe by grouping by q_id and doc_id_a such that the form becomes a single query, a single doc_id_a and a list of doc_id_bs
     """
     model = adhocRestructure(model, corpus)
     new_df = triples.groupby(['q_id', 'doc_id_a']).agg({'doc_id_b': list}).reset_index()
     new_df['doc_id_b'] = new_df.apply(lambda x : model(x['qid'], x['doc_id_b']), axis=1)
-
+    new_df['doc_id_b'] = new_df['doc_id_b'].apply(lambda x : x[:num_docs])
     return new_df
+
