@@ -6,7 +6,6 @@ import json
 import pandas as pd
 import ir_datasets as irds
 from transformers import T5ForConditionalGeneration, T5Tokenizer
-import torch
 
 def main(data : str, dataset_name, out_dir : str, epochs : int = 10, batch_size : int = 32, lr : float = 0.001, max=True, eta=0.1, min_eta=0.01, max_eta=0.5):
 
