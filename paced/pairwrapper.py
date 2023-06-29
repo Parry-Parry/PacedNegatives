@@ -9,6 +9,7 @@ import numpy as np
 import ir_datasets
 
 from torch.autograd import Variable, grad
+from transformers import AdamW
 from .weights import EtaWeights, Weights
 
 RND = 42
@@ -27,7 +28,6 @@ class PacedWrapper:
                  batch_size,
                  model_init,
                  tokenizer,
-                 optimizer,
                  lr, 
                  ignore_index) -> None:
         cudnn.benchmark = True
@@ -47,7 +47,7 @@ class PacedWrapper:
         self.model = model_init().to(self.device)
         self.meta_model = model_init().copy().to(self.device)
         self.tokenizer = tokenizer
-        self.optimizer = optimizer
+        self.optimizer = AdamW(self.model.parameters(), lr=lr)
 
         self.lr = lr
         self.meta_lr = lr
@@ -86,9 +86,16 @@ class PacedWrapper:
 
         return px, nx, o_p, o_n
     
-class stdWrapper(PacedWrapper):
-    def __init__(self, dataset, model_name, batch_size, model_init, optimizer, tokenizer, lr, ignore_index) -> None:
-        super().__init__(dataset, model_name, batch_size, model_init, optimizer, tokenizer, lr, ignore_index)
+class StdWrapper(PacedWrapper):
+    def __init__(self, 
+                 dataset, 
+                 model_name, 
+                 batch_size, 
+                 model_init, 
+                 tokenizer, 
+                 lr, 
+                 ignore_index) -> None:
+        super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
     def meta_loop(self, j, epoch):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
@@ -193,49 +200,95 @@ class stdWrapper(PacedWrapper):
 
 
 class MetaWrapper(PacedWrapper):
-    def __init__(self, eta, min_eta, max_eta, model_init, optimizer, lr, ignore_index) -> None:
-        super().__init__(model_init, optimizer, lr, ignore_index)
+    def __init__(self, 
+                 eta,
+                 min_eta,
+                 max_eta,
+                 dataset, 
+                 model_name, 
+                 batch_size, 
+                 model_init, 
+                 tokenizer, 
+                 lr, 
+                 ignore_index) -> None:
+        super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
         self.weights = EtaWeights(eta, device=self.device, min=np.log(min_eta), max=max_eta)
         self.logs['eta'] = eta
 
     def meta_loop(self, j, epoch):
-        i, o = self.prep_batch(self.train_loader.get_batch(j, self.weights.forward(idx=j)))
+        px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
+
         self.meta_model.load_state_dict(self.model.state_dict())
-                    
-        logits = self.meta_model(input_ids=i, labels=o).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o.view(-1))
+
+        ## positive
         
-        self.weights.eta = self.weights.clamp(self.weights.eta)
+        logits = self.meta_model(input_ids=px, labels=o_p).logits
+        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
         v = self.weights.forward(loss=ce, idx=j)
+
+        weighted_ce_p = torch.sum(ce * v) / len(ce)
+
+        ## negative
+
+        logits = self.meta_model(input_ids=nx, labels=o_n).logits
+        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        v = self.weights.forward(loss=ce, idx=j)
+        weighted_ce_n = torch.sum(ce * v) / len(ce)
         
-        weighted_ce = torch.sum(ce * v) / len(ce)
+        weighted_ce = weighted_ce_p + weighted_ce_n
+        
         self.meta_model.zero_grad()
         grads = grad(weighted_ce, (self.meta_model.parameters()), create_graph=True, retain_graph=True)
-        meta_lr = self.lr * ((0.1 ** int(epoch >= self.epochs * 1/4)) * (0.1 ** int(epoch >= self.epochs * 1/2)))
-        self.update_params(self.meta_model, lr=meta_lr, grads=grads)
+        self.meta_lr = self.lr * ((0.1 ** int(epoch >= self.epochs * 1/4)) * (0.1 ** int(epoch >= self.epochs * 1/2)))
+        self.update_params(self.meta_model, lr=self.meta_lr, grads=grads)
         del grads
 
-        logits = self.meta_model(input_ids=i, labels=o).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o.view(-1))
-        weighted_ce = torch.sum(ce * v) / len(ce)
-        grads_eta = grad(weighted_ce, self.weights.eta)
-        self.weights.eta = self.weights.eta - meta_lr * grads_eta[0]
-        del grads_eta
-    
-    def main_loop(self, j):
-        i, o = self.prep_batch(self.train_loader.get_batch(j, self.weights.forward(idx=j)))
-        eta = self.weights.clamp(self.weights.eta)
+        ## update weights
 
-        logits = self.model(input_ids=i, labels=o).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o.view(-1))
-        v = self.weights.no_grad(ce, eta, idx=j)
-        weighted_ce = torch.sum(ce * v) / len(ce)
+        with torch.no_grad():
+            logits = self.meta_model(input_ids=px, labels=o_p).logits
+        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
+        v = self.weights.forward(loss=ce, idx=j)
+        weighted_ce_p = torch.sum(ce * v) / len(ce)
+
+        with torch.no_grad():
+            logits = self.meta_model(input_ids=nx, labels=o_n).logits
+        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        v = self.weights.forward(loss=ce, idx=j)
+        weighted_ce_n = torch.sum(ce * v) / len(ce)
+
+        weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
+        grads = grad(weighted_ce, (v,), create_graph=True, retain_graph=True)
+
+        v_ce = v - self.meta_lr * grads[0]
+        self.weights.set_weight(idx=j, weight=v_ce)
+        del grads
+
+    def main_loop(self, j):
+        px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
+
+        logits = self.model(input_ids=px, labels=o_p).logits
+        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
+        with torch.no_grad():
+            v = self.weights.forward(loss=ce, idx=j)
+        weighted_ce_p = torch.sum(ce * v) / len(ce)
+
+        logits = self.meta_model(input_ids=nx, labels=o_n).logits
+        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        with torch.no_grad():
+            v = self.weights.forward(loss=ce, idx=j)
+        weighted_ce_n = torch.sum(ce * v) / len(ce)
+
+        weighted_ce = weighted_ce_p + weighted_ce_n
+        
+        loss = torch.mean(weighted_ce)
+        
         self.optimizer.zero_grad()
-        weighted_ce.backward()
+        loss.backward()
         self.optimizer.step()
 
-        return eta, ce, weighted_ce, v
+        return loss.item()
 
     def train(self, train_loader, epochs):
         self.epochs = epochs
