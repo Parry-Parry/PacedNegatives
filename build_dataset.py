@@ -11,8 +11,8 @@ def clean_text(text):
     text = re.sub(r'[^A-Za-z0-9 ]+', '', text)
     return re.sub(r'/[^\x00-\x7F]/g', '', text).strip()
 
-def main(dataset : str, out_dir : str, cut=0):
-    ds = pt.get_dataset(dataset)
+def main(dataset : str, terrier_dataset : str, out_dir : str, cut=0):
+    ds = pt.get_dataset(terrier_dataset)
     indx = pt.IndexFactory.of(ds.get_index(variant='terrier_stemmed'))
     scorer = pt.batchretrieve.TextScorer(body_attr='text', wmodel='BM25', background_index=indx, properties={"termpipelines" : "Stopwords,PorterStemmer"})
     
