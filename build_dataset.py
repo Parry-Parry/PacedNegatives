@@ -2,11 +2,10 @@ import pyterrier as pt
 pt.init()
 
 from fire import Fire
-from .paced.util import *
+from paced.util import *
 import re
 import ir_datasets
 import pandas as pd
-from os.path import join
 
 def clean_text(text):
     text = re.sub(r'[^A-Za-z0-9 ]+', '', text)
