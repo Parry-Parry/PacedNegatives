@@ -9,7 +9,7 @@ class adhocRestructure:
     def __call__(self, q, idx):
         tmp_frame = pd.DataFrame({'query_id': [q] * len(idx), 'query' : [self.queries[q]] * len(idx), 'docno': idx, 'text' : [self.docs[i] for i in idx]})
         scored = self.model(tmp_frame)
-        return scored.sort_values('score', ascending=False).doc_id.tolist()
+        return scored.sort_values('score', ascending=False).docno.tolist()
 
 def collapse_triples(triples, model, corpus, num_docs=0):
     """
