@@ -7,7 +7,7 @@ class adhocRestructure:
         self.docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
     
     def __call__(self, q, idx):
-        tmp_frame = pd.DataFrame({'query_id': [q] * len(idx), 'query' : [self.queries[q]] * len(idx), 'doc_id': idx, 'text' : [self.docs[i] for i in idx]})
+        tmp_frame = pd.DataFrame({'query_id': [q] * len(idx), 'query' : [self.queries[q]] * len(idx), 'docno': idx, 'text' : [self.docs[i] for i in idx]})
         scored = self.model(tmp_frame)
         return scored.sort_values('score', ascending=False).doc_id.tolist()
 
