@@ -8,7 +8,7 @@ class adhocRestructure:
     
     def __call__(self, q, idx):
         tmp_frame = pd.DataFrame({'query_id': [q] * len(idx), 'query' : [self.queries[q]] * len(idx), 'doc_id': idx, 'text' : [self.docs[i] for i in idx]})
-        scored = self.model.score(tmp_frame)
+        scored = self.model(tmp_frame)
         return scored.sort_values('score', ascending=False).doc_id.tolist()
 
 def collapse_triples(triples, model, corpus, num_docs=0):
@@ -21,3 +21,7 @@ def collapse_triples(triples, model, corpus, num_docs=0):
     if num_docs: new_df['doc_id_b'] = new_df['doc_id_b'].apply(lambda x : x[:num_docs])
     return new_df[['query_id', 'doc_id_a', 'doc_id_b']]
 
+def take_subset(triples, num_docs=10):
+    triples = triples.copy()
+    triples['doc_id_b'] = triples['doc_id_b'].apply(lambda x : x[:num_docs])
+    return triples
