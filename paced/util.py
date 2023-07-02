@@ -13,6 +13,7 @@ class adhocRestructure:
     
     def __call__(self, q, idx):
         tmp_frame = pd.DataFrame({'qid': [q] * len(idx), 'query' : [clean_text(self.queries[q])] * len(idx), 'docno': idx, 'text' : [clean_text(self.docs[i]) for i in idx]})
+        print(len(tmp_frame))
         scored = self.model(tmp_frame)
         return scored.sort_values('score', ascending=False).docno.tolist()
 
