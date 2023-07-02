@@ -39,7 +39,7 @@ def collapse_triples(triples, model, corpus):
                 return 0
         
         result = sorted(idx, key=lambda x : scoring(x), reverse=True)
-        counts = len([i for i in result if i not in _scores])s
+        counts = len([i for i in result if i not in _scores])
         print('QID {qid} Failed to find {counts} docs'.format(qid=qid, counts=counts))
         return result
     
