@@ -8,6 +8,7 @@ class adhocRestructure:
     
     def __call__(self, q, idx):
         tmp_frame = pd.DataFrame({'qid': [q] * len(idx), 'query' : [self.queries[q]] * len(idx), 'docno': idx, 'text' : [self.docs[i] for i in idx]})
+        print(tmp_frame)
         scored = self.model(tmp_frame)
         return scored.sort_values('score', ascending=False).docno.tolist()
 
@@ -17,6 +18,7 @@ def collapse_triples(triples, model, corpus, num_docs=0):
     """
     model = adhocRestructure(model, corpus)
     new_df = triples.groupby(['query_id', 'doc_id_a']).agg({'doc_id_b': list}).reset_index()
+    print(new_df.head(5))
     new_df['doc_id_b'] = new_df.apply(lambda x : model(x['query_id'], x['doc_id_b']), axis=1)
     if num_docs: new_df['doc_id_b'] = new_df['doc_id_b'].apply(lambda x : x[:num_docs])
     return new_df[['query_id', 'doc_id_a', 'doc_id_b']]
