@@ -32,16 +32,14 @@ def collapse_triples(triples, model, corpus):
 
     def get_ordered(qid, idx):
         _scores = score_query[qid]
-        counts = 0
         def scoring(docno):
-            global counts
             try:
                 return _scores[docno]
             except KeyError:
-                counts += 1
                 return 0
         
         result = sorted(idx, key=lambda x : scoring(x), reverse=True)
+        counts = len([i for i in result if i not in _scores])s
         print('QID {qid} Failed to find {counts} docs'.format(qid=qid, counts=counts))
         return result
     
