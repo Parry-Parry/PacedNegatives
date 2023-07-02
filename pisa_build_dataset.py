@@ -34,6 +34,7 @@ def collapse_triples(triples, model, corpus):
         _scores = score_query[qid]
         counts = 0
         def scoring(docno):
+            global counts
             try:
                 return _scores[docno]
             except KeyError:
