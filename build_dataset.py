@@ -10,7 +10,7 @@ import pandas as pd
 def main(dataset : str, terrier_dataset : str, out_dir : str, cut=0):
     ds = pt.get_dataset(terrier_dataset)
     indx = pt.IndexFactory.of(ds.get_index(variant='terrier_stemmed'))
-    scorer = pt.batchretrieve.TextScorer(body_attr='text', wmodel='BM25', background_index=indx, properties={"termpipelines" : "Stopwords,PorterStemmer"})
+    scorer = pt.batchretrieve.TextScorer(body_attr='text', wmodel='BM25', background_index=indx, properties={"termpipelines" : "Stopwords,PorterStemmer"}, verbose=False)
     
     dataset = ir_datasets.load(dataset)
     triples = pd.DataFrame(dataset.docpairs_iter())
