@@ -51,7 +51,7 @@ def main(dataset : str, out_dir : str):
     triples = pd.DataFrame(dataset.docpairs_iter())
 
     new_df = collapse_triples(triples, index, dataset)
-    new_df.to_json(out_dir, orient='records', lines=True, index=False)
+    new_df.to_json(out_dir, orient='records', lines=True)
 
 if __name__ == '__main__':
     Fire(main)
