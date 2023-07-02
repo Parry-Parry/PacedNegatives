@@ -39,7 +39,7 @@ def collapse_triples(triples, model, corpus):
                 return _scores[docno]
             except KeyError:
                 counts += 1
-                return 1000
+                return 0
         
         result = sorted(idx, key=lambda x : scoring(x), reverse=True)
         print('QID {qid} Failed to find {counts} docs'.format(qid=qid, counts=counts))
