@@ -43,14 +43,14 @@ def collapse_triples(triples, model, corpus):
     new_df['doc_id_b'] = new_df.apply(lambda x : get_ordered(x['query_id'], x['doc_id_b']), axis=1)
     return new_df[['query_id', 'doc_id_a', 'doc_id_b']]
 
-def main(dataset : str, out_dir : str, cut=0):
+def main(dataset : str, out_dir : str):
     pisa_index = PisaIndex.from_dataset('msmarco_passage', 'pisa_porter2')
     index = pisa_index.bm25(num_results=1000, threads=8)
     
     dataset = ir_datasets.load(dataset)
     triples = pd.DataFrame(dataset.docpairs_iter())
 
-    new_df = collapse_triples(triples, index, dataset, num_docs=cut)
+    new_df = collapse_triples(triples, index, dataset)
     new_df.to_json(out_dir, orient='records', lines=True, index=False)
 
 if __name__ == '__main__':
