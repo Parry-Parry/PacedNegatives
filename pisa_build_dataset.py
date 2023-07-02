@@ -32,13 +32,18 @@ def collapse_triples(triples, model, corpus):
 
     def get_ordered(qid, idx):
         _scores = score_query[qid]
+        counts = 0
         def scoring(docno):
             try:
                 return _scores[docno]
             except KeyError:
+                counts += 1
                 return 1000
-        return sorted(idx, key=lambda x : scoring(x), reverse=True)
-
+        
+        result = sorted(idx, key=lambda x : scoring(x), reverse=True)
+        print('QID {qid} Failed to find {counts} docs'.format(qid=qid, counts=counts))
+        return result
+    
     new_df = triples.groupby(['query_id', 'doc_id_a']).agg({'doc_id_b': list}).reset_index()
     new_df['doc_id_b'] = new_df.apply(lambda x : get_ordered(x['query_id'], x['doc_id_b']), axis=1)
     return new_df[['query_id', 'doc_id_a', 'doc_id_b']]
