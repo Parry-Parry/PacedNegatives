@@ -33,9 +33,10 @@ def take_subset(triples, num_docs=10):
     return triples
 
 def get_balanced_idx(vals, num_docs):
-    spacing = np.linspace(0, len(vals), num_docs, endpoint=True, dtype=int)
+    spacing = np.linspace(0, len(vals)-1, num_docs, endpoint=True, dtype=int)
     return [vals[i] for i in spacing]
 
 def take_balanced_subset(triples, num_docs=10):
     triples = triples.copy()
     triples['doc_id_b'] = triples['doc_id_b'].apply(lambda x : get_balanced_idx(x, num_docs))
+    return triples
