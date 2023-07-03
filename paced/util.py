@@ -33,6 +33,7 @@ def take_subset(triples, num_docs=10):
 
 def get_balanced_idx(vals, num_docs):
     spacing = np.linspace(0, len(vals)-1, num_docs, endpoint=True, dtype=int)
+    if vals < len(spacing): return vals # bring up to full length
     return [vals[i] for i in spacing]
 
 def take_balanced_subset(triples, num_docs=10):
