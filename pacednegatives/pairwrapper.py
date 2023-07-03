@@ -102,7 +102,6 @@ class StdWrapper(PacedWrapper):
 
     def meta_loop(self, j):
         batch = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
-        print(batch)
         px, nx, o_p, o_n = batch
 
         self.meta_model.load_state_dict(self.model.state_dict())
@@ -110,7 +109,7 @@ class StdWrapper(PacedWrapper):
         ## positive
         
         logits = self.meta_model(input_ids=px, labels=o_p).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         v = self.weights.forward(idx=j)
 
         weighted_ce_p = torch.sum(ce * v) / len(ce)
@@ -118,7 +117,7 @@ class StdWrapper(PacedWrapper):
         ## negative
 
         logits = self.meta_model(input_ids=nx, labels=o_n).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         v = self.weights.forward(idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
         
@@ -133,13 +132,13 @@ class StdWrapper(PacedWrapper):
 
         with torch.no_grad():
             logits = self.meta_model(input_ids=px, labels=o_p).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         v = self.weights.forward(idx=j)
         weighted_ce_p = torch.sum(ce * v) / len(ce) 
 
         with torch.no_grad():
             logits = self.meta_model(input_ids=nx, labels=o_n).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         v = self.weights.forward(idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
 
@@ -154,13 +153,13 @@ class StdWrapper(PacedWrapper):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
 
         logits = self.model(input_ids=px, labels=o_p).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         with torch.no_grad():
             v = self.weights.forward(idx=j)
         weighted_ce_p = torch.sum(ce * v) / len(ce)
 
         logits = self.meta_model(input_ids=nx, labels=o_n).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         with torch.no_grad():
             v = self.weights.forward(idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
@@ -229,7 +228,7 @@ class MetaWrapper(PacedWrapper):
         ## positive
         
         logits = self.meta_model(input_ids=px, labels=o_p).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         v = self.weights.forward(loss=ce, idx=j)
 
         weighted_ce_p = torch.sum(ce * v) / len(ce)
@@ -237,7 +236,7 @@ class MetaWrapper(PacedWrapper):
         ## negative
 
         logits = self.meta_model(input_ids=nx, labels=o_n).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         self.weights.eta = self.weights.clamp(self.weights.eta)
         v = self.weights.forward(loss=ce, idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
@@ -253,13 +252,13 @@ class MetaWrapper(PacedWrapper):
 
         with torch.no_grad():
             logits = self.meta_model(input_ids=px, labels=o_p).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         v = self.weights.forward(loss=ce, idx=j)
         weighted_ce_p = torch.sum(ce * v) / len(ce)
 
         with torch.no_grad():
             logits = self.meta_model(input_ids=nx, labels=o_n).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         v = self.weights.forward(loss=ce, idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
 
@@ -276,13 +275,13 @@ class MetaWrapper(PacedWrapper):
         self.weights.eta = self.weights.clamp(self.weights.eta)
 
         logits = self.model(input_ids=px, labels=o_p).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         with torch.no_grad():
             v = self.weights.forward(loss=ce, idx=j)
         weighted_ce_p = torch.sum(ce * v) / len(ce)
 
         logits = self.meta_model(input_ids=nx, labels=o_n).logits
-        ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         with torch.no_grad():
             v = self.weights.forward(loss=ce, idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
