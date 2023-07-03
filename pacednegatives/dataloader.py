@@ -66,11 +66,6 @@ class PairLoader:
                 nx.append(self.format(_q, _n))
                 o_p.append(OUTPUTS[0])
                 o_n.append(OUTPUTS[1])
-
-        print(px)
-        print(nx)
-        print(o_p)
-        print(o_n)
         return px, nx, o_p, o_n
 
         
