@@ -9,7 +9,7 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 
 def main(
         data : str, 
-        dataset_name, 
+        dataset_name : str, 
         out_dir : str, 
         epochs : int = 10, 
         batch_size : int = 32, 

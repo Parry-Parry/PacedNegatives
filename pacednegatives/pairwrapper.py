@@ -179,7 +179,7 @@ class StdWrapper(PacedWrapper):
         self.train_loader = train_loader   
         self.epochs = epochs
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
-                                                         num_warmup_steps=warmup_steps, 
+                                                         num_warmup_steps=warmup_steps if warmup_steps else len(train_loader) // 4, 
                                                          num_training_steps=epochs * len(train_loader))
         
         start = time.time()
@@ -302,7 +302,7 @@ class MetaWrapper(PacedWrapper):
         _logger = ir_datasets.log.easy()
 
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
-                                                         num_warmup_steps=warmup_steps, 
+                                                         num_warmup_steps=warmup_steps if warmup_steps else len(train_loader) // 4, 
                                                          num_training_steps=epochs * len(train_loader))
 
         start = time.time()
