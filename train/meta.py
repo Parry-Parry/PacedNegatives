@@ -1,6 +1,6 @@
 from fire import Fire
-from ..pairwrapper import MetaWrapper
-from ..dataloader import TripletDataset, TripletLoader
+from paced.pairwrapper import MetaWrapper
+from paced.dataloader import TripletDataset, TripletLoader
 import os
 import json
 import pandas as pd
@@ -24,11 +24,11 @@ def main(
 
     ## INIT DATA ##
 
-    dataset = pd.DataFrame.from_json(data, orient='records')
+    dataset = pd.DataFrame.from_json(data, orient='records', lines=True)
     corpus = irds.load(dataset_name)
 
     pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
-    neg_idx = dataset['doc_id_b'].values.tolist()
+    neg_idx = dataset['doc_id_b'].values.to_numpy()
 
     dataset = TripletDataset(pairs, neg_idx, corpus, max)
     loader = TripletLoader(dataset, batch_size)

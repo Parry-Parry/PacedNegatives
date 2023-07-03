@@ -24,7 +24,7 @@ class TripletDataset(Dataset):
         assert weights, "Weights not set"
         q, p = self.data[idx]
         n = self.neg_idx[idx, self.round(self.weights[idx].item() * self.n_neg)]
-        return self.queries[q], self.queries[p], self.docs[n]
+        return self.queries[q], self.docs[p], self.docs[n]
 
 class TripletLoader:
     def __init__(self, dataset, batch_size) -> None:

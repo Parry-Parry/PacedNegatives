@@ -1,6 +1,6 @@
 from fire import Fire
-from ..pairwrapper import StdWrapper
-from ..dataloader import TripletDataset, TripletLoader
+from paced.pairwrapper import StdWrapper
+from paced.dataloader import TripletDataset, TripletLoader
 import os
 import json
 import pandas as pd
@@ -21,7 +21,7 @@ def main(
 
     ## INIT DATA ##
 
-    dataset = pd.DataFrame.from_json(data, orient='records')
+    dataset = pd.DataFrame.from_json(data, orient='records', lines=True)
     corpus = irds.load(dataset_name)
 
     pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
