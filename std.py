@@ -26,7 +26,7 @@ def main(
     corpus = irds.load(dataset_name)
 
     pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
-    neg_idx = dataset['doc_id_b'].values.tolist()
+    neg_idx = dataset['doc_id_b'].values
 
     dataset = TripletDataset(pairs, neg_idx, corpus, max)
     loader = TripletLoader(dataset, batch_size)
