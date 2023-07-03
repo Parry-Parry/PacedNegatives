@@ -49,7 +49,7 @@ class PacedWrapper:
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=ignore_index, reduction='none')
 
         self.model = model_init().to(self.device)
-        self.meta_model = model_init().copy().to(self.device)
+        self.meta_model = model_init().to(self.device)
         self.tokenizer = tokenizer
         self.optimizer = AdamW(self.model.parameters(), lr=lr)
 
