@@ -53,6 +53,8 @@ class PacedWrapper:
         self.tokenizer = tokenizer
         self.optimizer = AdamW(self.model.parameters(), lr=lr)
 
+        self.batch_size = batch_size
+
     def set_param(self, curr_mod, name, param):
         if '.' in name:
             n = name.split('.')
