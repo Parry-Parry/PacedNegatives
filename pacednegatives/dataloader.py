@@ -62,7 +62,7 @@ class TripletLoader:
         q, p, n = [], [], []
         if weights is None: weights = gen_var(torch.ones(self.batch_size), True).to(self.device)
         for i in range(idx * self.batch_size, (idx + 1) * self.batch_size):
-            _q, _p, _n = self.dataset.get_items(i, weights)
+            _q, _p, _n = self.dataset.get_items(i, weights[i].item())
             q.append(_q)
             p.append(_p)
             n.append(_n)
