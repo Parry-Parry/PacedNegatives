@@ -77,10 +77,10 @@ class PacedWrapper:
     def prep_batch(self, batch):
         px, nx, o_p, o_n = batch
 
-        px = self.tokenizer(px, padding=True, truncation=True, return_tensors='pt').input_ids.to(self.device)
-        nx = self.tokenizer(nx, padding=True, truncation=True, return_tensors='pt').input_ids.to(self.device)
-        o_p = self.tokenizer(o_p, padding=True, truncation=True, return_tensors='pt').input_ids.to(self.device)
-        o_n = self.tokenizer(o_n, padding=True, truncation=True, return_tensors='pt').input_ids.to(self.device)
+        px = self.tokenizer(px, padding=True, return_tensors='pt').input_ids.to(self.device)
+        nx = self.tokenizer(nx, padding=True, return_tensors='pt').input_ids.to(self.device)
+        o_p = self.tokenizer(o_p, padding=True, return_tensors='pt').input_ids.to(self.device)
+        o_n = self.tokenizer(o_n, padding=True, return_tensors='pt').input_ids.to(self.device)
 
         px = Variable(px, requires_grad=False)
         nx = Variable(nx, requires_grad=False)
@@ -102,6 +102,7 @@ class StdWrapper(PacedWrapper):
 
     def meta_loop(self, j):
         batch = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
+        print(f'length of batch: {len(batch)}')
         px, nx, o_p, o_n = batch
 
         self.meta_model.load_state_dict(self.model.state_dict())
@@ -109,6 +110,7 @@ class StdWrapper(PacedWrapper):
         ## positive
         
         logits = self.meta_model(input_ids=px, labels=o_p).logits
+        print(f'logits shape: {logits.shape}')
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         v = self.weights.forward(idx=j)
 
