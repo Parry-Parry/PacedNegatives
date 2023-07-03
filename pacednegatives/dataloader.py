@@ -1,4 +1,3 @@
-import torch.utils.data.Dataset as Dataset
 from torch.autograd import Variable
 import torch
 import pandas as pd
@@ -8,7 +7,7 @@ gen_var = lambda x, y : Variable(x, requires_grad=y)
 
 OUTPUTS = ["TRUE", "FALSE"]
 
-class TripletDataset(Dataset):
+class TripletDataset:
     def __init__(self, pairs, neg_idx, corpus, max=False):
         self.neg_idx = neg_idx
         self.n_neg = neg_idx.shape[-1]
