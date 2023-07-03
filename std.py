@@ -21,7 +21,8 @@ def main(
 
     ## INIT DATA ##
 
-    dataset = pd.read_json(data, orient='records', lines=True)
+    with open(data, 'r') as f:
+        dataset = pd.read_json(f, orient='records', lines=True)
     corpus = irds.load(dataset_name)
 
     pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
