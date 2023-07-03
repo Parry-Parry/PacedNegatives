@@ -102,15 +102,16 @@ class StdWrapper(PacedWrapper):
 
     def meta_loop(self, j):
         batch = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
-        print(f'length of batch: {len(batch)}')
         px, nx, o_p, o_n = batch
+
+        print(f'positive len {len(o_p)}')
+        print(f'negative len {len(o_n)}')
 
         self.meta_model.load_state_dict(self.model.state_dict())
 
         ## positive
         
         logits = self.meta_model(input_ids=px, labels=o_p).logits
-        print(f'logits shape: {logits.shape}')
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         v = self.weights.forward(idx=j)
 
