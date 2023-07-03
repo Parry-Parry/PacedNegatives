@@ -102,7 +102,7 @@ class StdWrapper(PacedWrapper):
 
     def meta_loop(self, j):
         batch = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
-        logging.info(batch)
+        print(batch)
         px, nx, o_p, o_n = batch
 
         self.meta_model.load_state_dict(self.model.state_dict())
