@@ -21,7 +21,7 @@ class TripletDataset:
         return len(self.data)
     
     def get_items(self, idx, weights=None):
-        assert weights, "Weights not set"
+        assert weights is not None, "Weights not set"
         q, p = self.data[idx]
         n = self.neg_idx[idx, self.round(self.weights[idx].item() * self.n_neg)]
         return self.queries[q], self.docs[p], self.docs[n]
