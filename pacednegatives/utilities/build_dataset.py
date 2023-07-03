@@ -2,8 +2,7 @@ import pyterrier as pt
 pt.init()
 
 from fire import Fire
-from paced.util import *
-import re
+from pacednegatives.util import *
 import ir_datasets
 import pandas as pd
 

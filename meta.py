@@ -17,7 +17,7 @@ def main(
         max=True, 
         eta=0.1, 
         min_eta=0.01, 
-        max_eta=0.5,
+        max_eta=15,
         warmup_steps=0):
 
     os.makedirs(out_dir, exist_ok=True)

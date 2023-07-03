@@ -10,7 +10,7 @@ import ir_datasets
 
 from torch.autograd import Variable, grad
 from transformers import AdamW, get_linear_schedule_with_warmup
-from .weights import EtaWeights, Weights
+from pacednegatives.weights import EtaWeights, Weights
 
 RND = 42
 

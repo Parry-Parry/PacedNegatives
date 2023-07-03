@@ -1,9 +1,10 @@
-from collections import defaultdict
 import pyterrier as pt 
 pt.init()
+
+from collections import defaultdict
 from pyterrier_pisa import PisaIndex
 from fire import Fire
-from paced.util import *
+from pacednegatives.util import *
 import re
 import ir_datasets
 import pandas as pd
