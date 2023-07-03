@@ -10,12 +10,13 @@ OUTPUTS = ["TRUE", "FALSE"]
 
 class TripletDataset(Dataset):
     def __init__(self, pairs, neg_idx, corpus, max=False):
-        self.data = pairs
         self.neg_idx = neg_idx
         self.n_neg = neg_idx.shape[-1]
         self.docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
         self.queries = pd.DataFrame(corpus.queries_iter()).set_index('query_id').text.to_dict()
         self.round = ceil if max else floor
+
+        self.data = [(self.queries[q], self.docs[p]) for q, p in pairs]
 
     def __len__(self):
         return len(self.data)
