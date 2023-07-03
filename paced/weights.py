@@ -21,7 +21,7 @@ class EtaWeights(nn.Module):
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
         self.eta =  torch.tensor([eta], requires_grad=True).to(device)
 
-        self.weighting = lambda x, y : (-x/y) + 1 
+        self.weighting = lambda x, y : nn.functional.sigmoid((-x/y) + 1)
         self.weights = torch.nn.Parameter(torch.ones(shape).to(self.device), requires_grad=False)
 
     def no_grad(self, loss, eta):
@@ -57,7 +57,6 @@ class Weights(nn.Module):
         super().__init__()
         self.shape = shape
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
         self.weight = torch.nn.Parameter(torch.ones(shape).to(self.device), requires_grad=True)
 
     def set_weight(self, idx, val):

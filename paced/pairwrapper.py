@@ -9,14 +9,18 @@ import numpy as np
 import ir_datasets
 
 from torch.autograd import Variable, grad
-from transformers import AdamW
+from transformers import AdamW, get_linear_schedule_with_warmup
 from .weights import EtaWeights, Weights
 
 RND = 42
 
-def adjust_lr(optimizer, init_lr, total_epochs):
-    def update(epoch):
-        lr = init_lr * ((0.2 ** int(epoch >= total_epochs * 1/4)) * (0.2 ** int(epoch >= total_epochs * 1/2))* (0.2 ** int(epoch >= total_epochs * 3/4)))
+def adjust_lr(optimizer, init_lr, num_warmup_steps, num_training_steps):
+    def update(step):
+        if step < num_warmup_steps:
+            lr = init_lr * float(step) / float(max(1, num_warmup_steps))
+        else:
+            lr =  init_lr * max(0.0, float(num_training_steps - step) / float(max(1, num_training_steps - num_warmup_steps)))
+        
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
     return update
@@ -48,9 +52,6 @@ class PacedWrapper:
         self.meta_model = model_init().copy().to(self.device)
         self.tokenizer = tokenizer
         self.optimizer = AdamW(self.model.parameters(), lr=lr)
-
-        self.lr = lr
-        self.meta_lr = lr
 
     def set_param(self, curr_mod, name, param):
         if '.' in name:
@@ -97,7 +98,7 @@ class StdWrapper(PacedWrapper):
                  ignore_index) -> None:
         super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
-    def meta_loop(self, j, epoch):
+    def meta_loop(self, j):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
 
         self.meta_model.load_state_dict(self.model.state_dict())
@@ -121,8 +122,7 @@ class StdWrapper(PacedWrapper):
         
         self.meta_model.zero_grad()
         grads = grad(weighted_ce, (self.meta_model.parameters()), create_graph=True, retain_graph=True)
-        self.meta_lr = self.lr * ((0.1 ** int(epoch >= self.epochs * 1/4)) * (0.1 ** int(epoch >= self.epochs * 1/2)))
-        self.update_params(self.meta_model, lr=self.meta_lr, grads=grads)
+        self.update_params(self.meta_model, lr=self.scheduler.get_lr(), grads=grads)
         del grads
 
         ## update weights
@@ -142,7 +142,7 @@ class StdWrapper(PacedWrapper):
         weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
         grads = grad(weighted_ce, (v,), create_graph=True, retain_graph=True)
 
-        v_ce = v - self.meta_lr * grads[0]
+        v_ce = v - self.scheduler.get_lr() * grads[0]
         self.weights.set_weight(idx=j, weight=v_ce)
         del grads
 
@@ -168,25 +168,26 @@ class StdWrapper(PacedWrapper):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        self.scheduler.step()
 
         return loss.item()
 
-
-    def train(self, train_loader, epochs):
+    def train(self, train_loader, epochs, warmup_steps):
         torch.manual_seed(RND)
         _logger = ir_datasets.log.easy()
         self.weights = Weights((len(train_loader) // self.batch_size, self.batch_size), device=self.device)
         self.train_loader = train_loader   
         self.epochs = epochs
-
-        self.update_lr = adjust_lr(self.optimizer, self.lr, epochs)
-
+        self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
+                                                         num_warmup_steps=warmup_steps, 
+                                                         num_training_steps=epochs * len(train_loader))
+        
         start = time.time()
 
         for epoch in range(epochs):
-            with _logger.pbar_raw(desc=f'train {epoch}', total= len(train_loader) // self.batch_size) as pbar:
+            with _logger.pbar_raw(desc=f'train {epoch}', total=len(train_loader) // self.batch_size) as pbar:
                 for j in range(len(train_loader) // self.batch_size):
-                    self.meta_loop(j, epoch)
+                    self.meta_loop(j)
                     loss = self.main_loop(j)
 
                     self.logs['loss']['train'].append(loss)
@@ -216,7 +217,7 @@ class MetaWrapper(PacedWrapper):
         self.weights = EtaWeights(eta, device=self.device, min=np.log(min_eta), max=max_eta)
         self.logs['eta'] = eta
 
-    def meta_loop(self, j, epoch):
+    def meta_loop(self, j):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
 
         self.meta_model.load_state_dict(self.model.state_dict())
@@ -233,6 +234,7 @@ class MetaWrapper(PacedWrapper):
 
         logits = self.meta_model(input_ids=nx, labels=o_n).logits
         ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_n.view(-1))
+        self.weights.eta = self.weights.clamp(self.weights.eta)
         v = self.weights.forward(loss=ce, idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
         
@@ -240,8 +242,7 @@ class MetaWrapper(PacedWrapper):
         
         self.meta_model.zero_grad()
         grads = grad(weighted_ce, (self.meta_model.parameters()), create_graph=True, retain_graph=True)
-        self.meta_lr = self.lr * ((0.1 ** int(epoch >= self.epochs * 1/4)) * (0.1 ** int(epoch >= self.epochs * 1/2)))
-        self.update_params(self.meta_model, lr=self.meta_lr, grads=grads)
+        self.update_params(self.meta_model, lr=self.scheduler.get_lr(), grads=grads)
         del grads
 
         ## update weights
@@ -261,12 +262,14 @@ class MetaWrapper(PacedWrapper):
         weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
         grads = grad(weighted_ce, (v,), create_graph=True, retain_graph=True)
 
-        v_ce = v - self.meta_lr * grads[0]
+        v_ce = v - self.scheduler.get_lr() * grads[0]
         self.weights.set_weight(idx=j, weight=v_ce)
         del grads
 
     def main_loop(self, j):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
+
+        self.weights.eta = self.weights.clamp(self.weights.eta)
 
         logits = self.model(input_ids=px, labels=o_p).logits
         ce = self.loss_fct(logits.view(-1, logits.size(-1)), o_p.view(-1))
@@ -287,25 +290,28 @@ class MetaWrapper(PacedWrapper):
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        self.scheduler.step()
 
         return loss.item()
 
-    def train(self, train_loader, epochs):
+    def train(self, train_loader, epochs, warmup_steps):
         self.epochs = epochs
         self.train_loader = train_loader
 
         torch.manual_seed(RND)
         _logger = ir_datasets.log.easy()
 
-        update_lr = adjust_lr(self.optimizer, self.lr, epochs)
+        self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
+                                                         num_warmup_steps=warmup_steps, 
+                                                         num_training_steps=epochs * len(train_loader))
 
         start = time.time()
 
         for epoch in range(epochs):
             with _logger.pbar_raw(desc=f'train {epoch}', total= len(train_loader) // self.batch_size) as pbar:
                 for j in range(len(train_loader) // self.batch_size):
-                    self.meta_loop(j, epoch)
-                    eta, ce, weighted_ce, v = self.main_loop(j, epoch)
+                    self.meta_loop(j)
+                    eta, ce, weighted_ce, v = self.main_loop(j)
 
                     if j == 1:  logging.info(f'loss: {ce} | v : {v}')
 
@@ -319,9 +325,6 @@ class MetaWrapper(PacedWrapper):
                 
                     pbar.update(1)
                     pbar.set_postfix({'loss': total_loss / (j+1)})
-
-                update_lr(epoch)
-                epoch += 1
 
         end = time.time() - start
 
