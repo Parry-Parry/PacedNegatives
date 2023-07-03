@@ -6,6 +6,7 @@ import json
 import pandas as pd
 import ir_datasets as irds
 from transformers import T5ForConditionalGeneration, T5Tokenizer
+import logging
 
 def main(
         data : str, 
@@ -47,4 +48,5 @@ def main(
         json.dump(logs, f)
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     Fire(main)
