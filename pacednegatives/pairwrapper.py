@@ -79,8 +79,8 @@ class PacedWrapper:
 
         px = self.tokenizer(px, padding=True, truncation=True, return_tensors='pt').input_ids.to(self.device)
         nx = self.tokenizer(nx, padding=True, truncation=True, return_tensors='pt').input_ids.to(self.device)
-        o_p = torch.tensor(o_p).to(self.device)
-        o_n = torch.tensor(o_n).to(self.device)
+        o_p = self.tokenizer(o_p, padding=True, truncation=True, return_tensors='pt').input_ids.to(self.device)
+        o_n = self.tokenizer(o_n, padding=True, truncation=True, return_tensors='pt').input_ids.to(self.device)
 
         px = Variable(px, requires_grad=False)
         nx = Variable(nx, requires_grad=False)

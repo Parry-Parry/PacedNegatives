@@ -1,6 +1,6 @@
 from fire import Fire
 from pacednegatives.pairwrapper import StdWrapper
-from pacednegatives.dataloader import TripletDataset, TripletLoader
+from pacednegatives.dataloader import TripletDataset, PairLoader
 import os
 import json
 import pandas as pd
@@ -30,7 +30,7 @@ def main(
     neg_idx = dataset['doc_id_b'].values
 
     dataset = TripletDataset(pairs, neg_idx, corpus, max)
-    loader = TripletLoader(dataset, batch_size)
+    loader = PairLoader(dataset, batch_size)
 
     ## INIT MODEL ##
 
