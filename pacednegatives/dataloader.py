@@ -11,7 +11,7 @@ class TripletDataset:
     def __init__(self, pairs, neg_idx, corpus, max=False):
         self.neg_idx = neg_idx
         self.n_neg = len(neg_idx[0]) - 1
-        print('num of negatives: ', len(self.n_neg))
+        print('num of negatives: ', self.n_neg)
         self.docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
         self.queries = pd.DataFrame(corpus.queries_iter()).set_index('query_id').text.to_dict()
         self.round = ceil if max else floor
@@ -26,25 +26,6 @@ class TripletDataset:
         q, p = self.data[idx]
         n = self.neg_idx[idx][self.round(weights[idx].item() * self.n_neg)]
         return q, p, self.docs[n]
-
-class TripletLoader:
-    def __init__(self, dataset, batch_size) -> None:
-        self.dataset = dataset
-        self.num_items = len(dataset)
-        self.batch_size = batch_size
-    
-    def __len__(self):
-        return self.num_items
-    
-    def get_batch(self, idx, weights=None):
-        q, p, n = [], [], []
-        if weights is None: weights = gen_var(torch.ones(self.batch_size), True).to(self.device)
-        for i in range(idx * self.batch_size, (idx + 1) * self.batch_size):
-            _q, _p, _n = self.dataset.get_items(i, weights)
-            q.append(_q)
-            p.append(_p)
-            n.append(_n)
-        return q, p, n
 
 class PairLoader:
     def __init__(self, dataset, batch_size) -> None:
@@ -68,5 +49,24 @@ class PairLoader:
                 o_p.append(OUTPUTS[0])
                 o_n.append(OUTPUTS[1])
         return px, nx, o_p, o_n
+    
+class TripletLoader:
+    def __init__(self, dataset, batch_size) -> None:
+        self.dataset = dataset
+        self.num_items = len(dataset)
+        self.batch_size = batch_size
+    
+    def __len__(self):
+        return self.num_items
+    
+    def get_batch(self, idx, weights=None):
+        q, p, n = [], [], []
+        if weights is None: weights = gen_var(torch.ones(self.batch_size), True).to(self.device)
+        for i in range(idx * self.batch_size, (idx + 1) * self.batch_size):
+            _q, _p, _n = self.dataset.get_items(i, weights)
+            q.append(_q)
+            p.append(_p)
+            n.append(_n)
+        return q, p, n
 
         
