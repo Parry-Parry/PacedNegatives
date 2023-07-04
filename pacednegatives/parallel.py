@@ -36,7 +36,7 @@ class ParaWrapper:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=ignore_index, reduction='none')
 
-        self.model = nn.DataParallel(model_init(), gpu_ids=gpus).to(0)
+        self.model = nn.DataParallel(model_init(), device_ids=gpus).to(0)
         self.tokenizer = tokenizer
         self.optimizer = AdamW(self.model.parameters(), lr=lr)
 
