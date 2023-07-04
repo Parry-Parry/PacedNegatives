@@ -28,6 +28,9 @@ class LevelWrapper(PacedWrapper):
         self.REL = self.tokenizer.encode('true')[0]
         self.NREL = self.tokenizer.encode('false')[0]
 
+        self.logs['difficulty'] = {'train': []}
+        self.logs['lr'] = []
+
     def check_success(self, pos, neg):
         pos_probs = pos[:, 0, (self.REL, self.NREL)].softmax(dim=-1)[:, 0]
         neg_probs = neg[:, 0, (self.REL, self.NREL)].softmax(dim=-1)[:, 0]
@@ -76,6 +79,8 @@ class LevelWrapper(PacedWrapper):
                 loss = self.main_loop(i)
 
                 self.logs['loss']['train'].append(loss)
+                self.logs['lr'].append(self.scheduler.get_last_lr()[0])
+                self.logs['difficulty']['train'].append(self.difficulty)
 
                 pbar.update(self.train_loader.batch_size)
 
