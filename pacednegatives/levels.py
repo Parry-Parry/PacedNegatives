@@ -70,7 +70,7 @@ class LevelWrapper(PacedWrapper):
                 if i % self.heuristic_step_check == 0 and len(self.success_rate) > 0:
                     agg_success_rate = np.mean(self.success_rate)
                     if agg_success_rate > self.success_threshold:
-                        self.difficulty = min(1.0, self.difficulty + 1 / train_loader.dataset.num_neg)
+                        self.difficulty = min(1.0, self.difficulty + 1 / train_loader.dataset.n_neg)
                     self.success_rate = []
 
                 loss = self.main_loop(i)
