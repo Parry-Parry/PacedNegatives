@@ -219,46 +219,15 @@ class NewWrapper(PacedWrapper):
     def meta_loop(self, j):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
 
-        #self.meta_model.load_state_dict(self.model.state_dict())
-        '''
-        ## positive
         with torch.no_grad():
-            logits = self.meta_model(input_ids=px, labels=o_p).logits
-        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
-        print(ce.view(-1, logits.size(-2)).shape)
-        ce = torch.mean(ce.view(-1, logits.size(-2)), dim=-1)
-        v = self.weights.forward(idx=j)
-        weighted_ce_p = torch.sum(ce * v) / len(ce)
-
-        ## negative
-        with torch.no_grad():
-            logits = self.meta_model(input_ids=nx, labels=o_n).logits
-        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
-        ce = torch.mean(ce.view(-1, logits.size(-2)), dim=-1)
-        weighted_ce_n = torch.sum(ce * v) / len(ce)
-        
-        weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
-        
-        self.meta_model.zero_grad()
-        grads = grad(weighted_ce, (self.meta_model.parameters()), create_graph=True, retain_graph=True)
-        self.update_params(self.meta_model, lr=self.scheduler.get_last_lr()[0], grads=grads)
-        del grads
-        '''
-        ## update weights
-
-        with torch.no_grad():
-            #logits = self.meta_model(input_ids=px, labels=o_p).logits
             logits = self.model(input_ids=px, labels=o_p).logits
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
-        #ce = torch.mean(ce.view(-1, logits.size(-2)), dim=-1)
         v = self.weights.forward(idx=j)
         weighted_ce_p = torch.sum(ce * v) / len(ce) 
 
         with torch.no_grad():
-            #logits = self.meta_model(input_ids=px, labels=o_p).logits
             logits = self.model(input_ids=nx, labels=o_n).logits
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
-        #ce = torch.mean(ce.view(-1, logits.size(-2)), dim=-1)
         v = self.weights.forward(idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
 
