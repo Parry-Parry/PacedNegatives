@@ -48,6 +48,29 @@ class PairLoader:
             o_n.append(OUTPUTS[1])
 
         return px, nx, o_p, o_n
+
+class LevelLoader:
+    def __init__(self, dataset, batch_size) -> None:
+        self.dataset = dataset
+        self.batch_size = batch_size
+    
+    def __len__(self):
+        return len(self.dataset)
+    
+    def format(self, q, d):
+        return 'Query: ' + q + ' Document: ' + d + ' Relevant:'
+    
+    def get_batch(self, idx, weight=None):
+        px, nx, o_p, o_n = [], [], [], []
+        if weight is None: weight = 0.0
+        for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
+            q, p, n = self.dataset.get_items(j, weight)
+            px.append(self.format(q, p))
+            nx.append(self.format(q, n))
+            o_p.append(OUTPUTS[0])
+            o_n.append(OUTPUTS[1])
+
+        return px, nx, o_p, o_n
     
 class TripletLoader:
     def __init__(self, dataset, batch_size) -> None:
