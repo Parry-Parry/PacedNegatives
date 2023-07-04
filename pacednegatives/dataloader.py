@@ -5,7 +5,7 @@ from math import floor, ceil
 
 gen_var = lambda x, y : Variable(x, requires_grad=y)
 
-OUTPUTS = ["TRUE", "FALSE"]
+OUTPUTS = ["true", "false"]
 
 class TripletDataset:
     def __init__(self, pairs, neg_idx, corpus, max=False):
