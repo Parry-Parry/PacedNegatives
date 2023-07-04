@@ -250,7 +250,7 @@ class NewWrapper(PacedWrapper):
             #logits = self.meta_model(input_ids=px, labels=o_p).logits
             logits = self.model(input_ids=px, labels=o_p).logits
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
-        ce = torch.mean(ce.view(-1, logits.size(-2)), dim=-1)
+        #ce = torch.mean(ce.view(-1, logits.size(-2)), dim=-1)
         v = self.weights.forward(idx=j)
         weighted_ce_p = torch.sum(ce * v) / len(ce) 
 
@@ -258,7 +258,7 @@ class NewWrapper(PacedWrapper):
             #logits = self.meta_model(input_ids=px, labels=o_p).logits
             logits = self.model(input_ids=nx, labels=o_n).logits
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
-        ce = torch.mean(ce.view(-1, logits.size(-2)), dim=-1)
+        #ce = torch.mean(ce.view(-1, logits.size(-2)), dim=-1)
         v = self.weights.forward(idx=j)
         weighted_ce_n = torch.sum(ce * v) / len(ce)
 
