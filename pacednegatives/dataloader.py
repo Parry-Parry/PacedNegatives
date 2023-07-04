@@ -40,8 +40,8 @@ class PairLoader:
     def get_batch(self, idx, weights=None):
         px, nx, o_p, o_n = [], [], [], []
         if weights is None: weights = gen_var(torch.ones(self.batch_size), True).to(self.device)
-        for j in range(idx * self.batch_size, (idx + 1) * self.batch_size-1):
-            q, p, n = self.dataset.get_items(j, weights[j].item())
+        for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
+            q, p, n = self.dataset.get_items(j, weights[int(j/self.batch_size)].item())
             px.append(self.format(q, p))
             nx.append(self.format(q, n))
             o_p.append(OUTPUTS[0])
