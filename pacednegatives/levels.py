@@ -29,8 +29,8 @@ class LevelWrapper(PacedWrapper):
         self.NREL = self.tokenizer.encode('false')[0]
 
     def check_success(self, pos, neg):
-        pos_probs = pos[:, 0, (self.REL, self.NREL)].softmax()[:, 0]
-        neg_probs = neg[:, 0, (self.REL, self.NREL)].softmax()[:, 0]
+        pos_probs = pos[:, 0, (self.REL, self.NREL)].softmax(dim=-1)[:, 0]
+        neg_probs = neg[:, 0, (self.REL, self.NREL)].softmax(dim=-1)[:, 0]
 
         self.success_rate.append(torch.mean((pos_probs > neg_probs).float()).item())
 
