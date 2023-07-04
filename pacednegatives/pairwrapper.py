@@ -124,7 +124,7 @@ class StdWrapper(PacedWrapper):
         
         self.meta_model.zero_grad()
         grads = grad(weighted_ce, (self.meta_model.parameters()), create_graph=True, retain_graph=True)
-        self.update_params(self.meta_model, lr=self.scheduler.get_lr(), grads=grads)
+        self.update_params(self.meta_model, lr=self.scheduler.get_last_lr()(), grads=grads)
         del grads
 
         ## update weights
@@ -146,7 +146,7 @@ class StdWrapper(PacedWrapper):
         weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
         grads = grad(weighted_ce, (v,), create_graph=True, retain_graph=True)
 
-        v_ce = v - self.scheduler.get_lr() * grads[0]
+        v_ce = v - self.scheduler.get_last_lr()() * grads[0]
         self.weights.set_weight(idx=j, weight=v_ce)
         del grads
 
@@ -241,7 +241,7 @@ class NewWrapper(PacedWrapper):
         
         self.meta_model.zero_grad()
         grads = grad(weighted_ce, (self.meta_model.parameters()), create_graph=True, retain_graph=True)
-        self.update_params(self.meta_model, lr=self.scheduler.get_lr(), grads=grads)
+        self.update_params(self.meta_model, lr=self.scheduler.get_last_lr()(), grads=grads)
         del grads
         '''
         ## update weights
@@ -265,7 +265,7 @@ class NewWrapper(PacedWrapper):
         weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
         grads = grad(weighted_ce, (v,), create_graph=True, retain_graph=True)
 
-        v_ce = v - self.scheduler.get_lr() * grads[0]
+        v_ce = v - self.scheduler.get_last_lr()() * grads[0]
         self.weights.set_weight(idx=j, weight=v_ce)
         del grads
 
