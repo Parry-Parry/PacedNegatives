@@ -117,7 +117,8 @@ class StdWrapper(PacedWrapper):
         logits = self.meta_model(input_ids=nx, labels=o_n).logits
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         v = self.weights.forward(idx=j)
-        weighted_ce_n = torch.sum(ce * v) / len(ce)
+        w = v.view(-1, 1).repeat(1, logits.shape[-2]).view(-1)
+        weighted_ce_n = torch.sum(ce * w) / len(ce)
         
         weighted_ce = weighted_ce_p + weighted_ce_n
         
@@ -132,13 +133,15 @@ class StdWrapper(PacedWrapper):
             logits = self.meta_model(input_ids=px, labels=o_p).logits
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         v = self.weights.forward(idx=j)
-        weighted_ce_p = torch.sum(ce * v) / len(ce) 
+        w = v.view(-1, 1).repeat(1, logits.shape[-2]).view(-1)
+        weighted_ce_p = torch.sum(ce * w) / len(ce) 
 
         with torch.no_grad():
             logits = self.meta_model(input_ids=nx, labels=o_n).logits
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         v = self.weights.forward(idx=j)
-        weighted_ce_n = torch.sum(ce * v) / len(ce)
+        w = v.view(-1, 1).repeat(1, logits.shape[-2]).view(-1)
+        weighted_ce_n = torch.sum(ce * w) / len(ce)
 
         weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
         grads = grad(weighted_ce, (v,), create_graph=True, retain_graph=True)
@@ -154,17 +157,125 @@ class StdWrapper(PacedWrapper):
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
         with torch.no_grad():
             v = self.weights.forward(idx=j)
-        weighted_ce_p = torch.sum(ce * v) / len(ce)
+        w = v.view(-1, 1).repeat(1, logits.shape[-2]).view(-1)
+        weighted_ce_p = torch.sum(ce * w) / len(ce)
 
         logits = self.meta_model(input_ids=nx, labels=o_n).logits
         ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
         with torch.no_grad():
             v = self.weights.forward(idx=j)
-        weighted_ce_n = torch.sum(ce * v) / len(ce)
+        w = v.view(-1, 1).repeat(1, logits.shape[-2]).view(-1)
+        weighted_ce_n = torch.sum(ce * w) / len(ce)
 
         weighted_ce = weighted_ce_p + weighted_ce_n
         
         loss = torch.mean(weighted_ce)
+        
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+        self.scheduler.step()
+
+        return loss.item()
+
+    def train(self, train_loader, epochs, warmup_steps):
+        torch.manual_seed(RND)
+        _logger = ir_datasets.log.easy()
+        self.weights = Weights((len(train_loader) // self.batch_size, self.batch_size), device=self.device)
+        self.train_loader = train_loader   
+        self.epochs = epochs
+        self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
+                                                         num_warmup_steps=warmup_steps if warmup_steps else len(train_loader) // 4, 
+                                                         num_training_steps=epochs * len(train_loader))
+        
+        start = time.time()
+
+        for epoch in range(epochs):
+            with _logger.pbar_raw(desc=f'train {epoch}', total=len(train_loader) // self.batch_size) as pbar:
+                for j in range(len(train_loader) // self.batch_size):
+                    self.meta_loop(j)
+                    loss = self.main_loop(j)
+
+                    self.logs['loss']['train'].append(loss)
+                    self.logs['avg_weight'][epoch].append(self.weights[j].mean().item())  
+
+                    pbar.update(1)
+
+        end = time.time() - start
+
+        self.logs['time'] = end
+
+class NewWrapper(PacedWrapper):
+    def __init__(self, 
+                 dataset, 
+                 model_name, 
+                 batch_size, 
+                 model_init, 
+                 tokenizer, 
+                 lr, 
+                 ignore_index) -> None:
+        super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
+
+    def meta_loop(self, j):
+        px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
+
+        self.meta_model.load_state_dict(self.model.state_dict())
+
+        ## positive
+        
+        logits = self.meta_model(input_ids=px, labels=o_p).logits
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1)).view(-1, logits.size(-2))
+        ce = torch.mean(ce, dim=-1)
+        v = self.weights.forward(idx=j)
+        weighted_ce_p = torch.sum(ce * v) / len(ce)
+
+        ## negative
+
+        logits = self.meta_model(input_ids=nx, labels=o_n).logits
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1)).view(-1, logits.size(-2))
+        ce = torch.mean(ce, dim=-1)
+        weighted_ce_n = torch.sum(ce * v) / len(ce)
+        
+        weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
+        
+        self.meta_model.zero_grad()
+        grads = grad(weighted_ce, (self.meta_model.parameters()), create_graph=True, retain_graph=True)
+        self.update_params(self.meta_model, lr=self.scheduler.get_lr(), grads=grads)
+        del grads
+
+        ## update weights
+
+        with torch.no_grad():
+            logits = self.meta_model(input_ids=px, labels=o_p).logits
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1)).view(-1, logits.size(-2))
+        ce = torch.mean(ce, dim=-1)
+        v = self.weights.forward(idx=j)
+        weighted_ce_p = torch.sum(ce * v) / len(ce) 
+
+        with torch.no_grad():
+            logits = self.meta_model(input_ids=nx, labels=o_n).logits
+        ce = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1)).view(-1, logits.size(-2))
+        ce = torch.mean(ce, dim=-1)
+        v = self.weights.forward(idx=j)
+        weighted_ce_n = torch.sum(ce * v) / len(ce)
+
+        weighted_ce = weighted_ce_p + weighted_ce_n - torch.sum(v)
+        grads = grad(weighted_ce, (v,), create_graph=True, retain_graph=True)
+
+        v_ce = v - self.scheduler.get_lr() * grads[0]
+        self.weights.set_weight(idx=j, weight=v_ce)
+        del grads
+
+    def main_loop(self, j):
+        px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.weights[j]))
+
+        logits = self.model(input_ids=px, labels=o_p).logits
+        ce_p = self.loss_fn(logits.view(-1, logits.size(-1)), o_p.view(-1))
+
+        logits = self.meta_model(input_ids=nx, labels=o_n).logits
+        ce_n = self.loss_fn(logits.view(-1, logits.size(-1)), o_n.view(-1))
+
+        loss = torch.mean(ce_p) + torch.mean(ce_n)
         
         self.optimizer.zero_grad()
         loss.backward()

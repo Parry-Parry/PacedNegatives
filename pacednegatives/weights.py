@@ -26,13 +26,12 @@ class EtaWeights(nn.Module):
     def no_grad(self, loss, eta):
         with torch.no_grad():
             weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
-
             for i in range(len(loss)):
                 if loss[i] > eta:
                     pass
                 else:
                     weight[i]  = self.weighting(loss[i], eta)
-            return weight
+            return torch.nn.functional.sigmoid(weight)
     
     def forward(self, loss=None, idx=None):
         if loss is None:
@@ -48,10 +47,9 @@ class EtaWeights(nn.Module):
                 weight[i] = self.weighting(loss[i], self.eta)
         
         if idx is not None: self.weights[idx] = weight
-        return weight
+        return torch.nn.functional.sigmoid(weight)
     
 class Weights(nn.Module):
-    #weighting = lambda x, y : (-y/x) + 1
     def __init__(self, shape, device = None):
         super().__init__()
         self.shape = shape
