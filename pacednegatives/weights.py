@@ -54,13 +54,13 @@ class Weights(nn.Module):
         super().__init__()
         self.shape = shape
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.weight = torch.nn.Parameter(torch.ones(shape).to(self.device), requires_grad=True)
+        self.weight = torch.nn.Parameter(torch.ones(shape).to(self.device), requires_grad=False)
 
     def set_weight(self, idx, val):
-        self.weight[idx] = nn.functional.sigmoid(val)
+        self.weight[idx] = nn.functional.sigmoid(val).to(self.device)
 
     def __getitem__(self, idx):
-        return self.weight[idx]
+        return gen_var(self.weight[idx], True).to(self.device)
 
     def forward(self, loss=None, idx=0):
-        return self.weight[idx]
+        return gen_var(self.weight[idx], True).to(self.device)

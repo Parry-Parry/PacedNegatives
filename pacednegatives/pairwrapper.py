@@ -147,7 +147,7 @@ class StdWrapper(PacedWrapper):
         grads = grad(weighted_ce, (v,), create_graph=True, retain_graph=True)
 
         v_ce = v - self.scheduler.get_last_lr()[0] * grads[0]
-        self.weights.set_weight(idx=j, val=v_ce)
+        self.weights.set_weight(idx=j, val=v_ce.data)
         del grads
 
     def main_loop(self, j):
