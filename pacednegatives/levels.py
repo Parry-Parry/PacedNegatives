@@ -87,3 +87,5 @@ class LevelWrapper(PacedWrapper):
         end = time.time() - start
 
         self.logs['time'] = end
+
+        return self.logs
