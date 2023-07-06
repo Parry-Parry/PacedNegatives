@@ -80,9 +80,10 @@ class LevelWrapper(PacedWrapper):
                 loss = self.main_loop(i)
 
                 if wandb.run is not None:
-                    wandb.log({'loss': loss, 'lr': self.scheduler.get_last_lr()[0], 'difficulty': self.difficulty})
+                    wandb.log({'loss': loss, 'success_rate' : self.success_rate[-1],'lr': self.scheduler.get_last_lr()[0], 'difficulty': self.difficulty})
 
                 self.logs['loss']['train'].append(loss)
+                self.logs['success_rate'] = self.success_rate[-1]
                 self.logs['lr'].append(self.scheduler.get_last_lr()[0])
                 self.logs['difficulty']['train'].append(self.difficulty)
 
