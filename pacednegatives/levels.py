@@ -2,6 +2,7 @@ import time
 import torch 
 import numpy as np
 import ir_datasets
+import wandb
 
 from transformers import get_linear_schedule_with_warmup
 from pacednegatives.pairwrapper import PacedWrapper
@@ -78,6 +79,9 @@ class LevelWrapper(PacedWrapper):
 
                 loss = self.main_loop(i)
 
+                if wandb.run is not None:
+                    wandb.log({'loss': loss, 'lr': self.scheduler.get_last_lr()[0], 'difficulty': self.difficulty})
+
                 self.logs['loss']['train'].append(loss)
                 self.logs['lr'].append(self.scheduler.get_last_lr()[0])
                 self.logs['difficulty']['train'].append(self.difficulty)
@@ -87,5 +91,7 @@ class LevelWrapper(PacedWrapper):
         end = time.time() - start
 
         self.logs['time'] = end
+        if wandb.run is not None:
+            wandb.log({'time': end})
 
         return self.logs

@@ -7,20 +7,35 @@ import pandas as pd
 import ir_datasets as irds
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 import logging
+import wandb
 
 def main(
         data : str, 
         dataset_name : str, 
         out_dir : str, 
         total_steps : int = 100000, 
-        batch_size : int = 32, 
+        batch_size : int = 16, 
         lr : float = 0.001, 
         max=True,
         warmup_steps=0,
         success_threshold=0.5,
-        heuristic_step_check=1000):
+        heuristic_step_check=1000,
+        wandb_project=None,):
 
     os.makedirs(out_dir, exist_ok=True)
+
+    if wandb_project is not None:
+        wandb.init(project=wandb_project, config={
+                'variant': data.split('/')[-1],
+                'dataset': dataset_name,
+                'total_steps': total_steps,
+                'batch_size': batch_size,
+                'lr': lr,
+                'max': max,
+                'warmup_steps': warmup_steps,
+                'success_threshold': success_threshold,
+                'heuristic_step_check': heuristic_step_check,
+            })
 
     ## INIT DATA ##
 
