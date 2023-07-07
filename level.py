@@ -20,6 +20,7 @@ def main(
         warmup_steps=0,
         success_threshold=0.5,
         heuristic_step_check=1000,
+        sample=False,
         wandb_project=None,):
 
     os.makedirs(out_dir, exist_ok=True)
@@ -43,7 +44,7 @@ def main(
         dataset = pd.read_json(f, orient='records', lines=True, dtype={'query_id': str, 'doc_id_a': str, 'doc_id_b': list})
     corpus = irds.load(dataset_name)
 
-    dataset = dataset.sample(frac=1).reset_index(drop=True)
+    if sample: dataset = dataset.sample(frac=1).reset_index(drop=True)
 
     pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
     neg_idx = dataset['doc_id_b'].values
