@@ -5,7 +5,7 @@ from os.path import join
 def main(script, data, dataset, out_dir, batch_size=16, lr=0.001, wandb_project=None, sample=False):
     start_vals = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
     end_vals = [0.6, 0.7, 0.8, 0.9, 1.0]
-    fracs = [0.1, 0.2, 0.3, 0.4, 0.5]
+    fracs = [0.2, 0.3, 0.4, 0.5]
 
     for start_val in start_vals:
         for end_val in end_vals:
