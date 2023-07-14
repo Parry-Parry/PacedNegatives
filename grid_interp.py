@@ -11,7 +11,7 @@ def main(script, data, dataset, out_dir, batch_size=16, lr=0.001, wandb_project=
         for end_val in end_vals:
             for frac in fracs:
                 out = join(out_dir, f'paced_{start_val}_{end_val}_{frac}')
-                args = f'python {script} --data {data} --dataset_name {dataset} --out_dir {out} --batch_size {batch_size} --lr {lr} --start_difficulty {start_val} --max_difficulty {end_val} --frac_interpolat {frac} --wandb_project {wandb_project}'
+                args = f'python {script} --data {data} --dataset_name {dataset} --out_dir {out} --batch_size {batch_size} --lr {lr} --start_difficulty {start_val} --max_difficulty {end_val} --frac_interpolate {frac} --wandb_project {wandb_project}'
                 if sample: args += ' --sample'
                 sp.run(args, shell=True)
 
