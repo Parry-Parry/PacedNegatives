@@ -20,7 +20,7 @@ class EtaWeights(nn.Module):
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
         self.eta =  torch.tensor([eta], requires_grad=True).to(device)
 
-        self.weighting = lambda x, y : nn.functional.sigmoid((-x/y) + 1)
+        self.weighting = lambda x, y : (-x/y) + 1
         self.weights = torch.nn.Parameter(torch.ones(shape).to(self.device), requires_grad=False)
 
     def no_grad(self, loss, eta):
@@ -31,13 +31,9 @@ class EtaWeights(nn.Module):
                     pass
                 else:
                     weight[i]  = self.weighting(loss[i], eta)
-            return torch.nn.functional.sigmoid(weight)
+            return weight
     
-    def forward(self, loss=None, idx=None):
-        if loss is None:
-            assert idx is not None
-            return self.weights[idx]
-        
+    def forward(self, loss=None):
         weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
 
         for i in range(len(loss)):
@@ -45,9 +41,8 @@ class EtaWeights(nn.Module):
                 weight[i] = torch.zeros(1).to(self.device).requires_grad_() * self.eta
             else:
                 weight[i] = self.weighting(loss[i], self.eta)
-        
-        if idx is not None: self.weights[idx] = weight
-        return torch.nn.functional.sigmoid(weight)
+
+        return weight
     
 class Weights(nn.Module):
     def __init__(self, shape, device = None):
