@@ -36,7 +36,7 @@ class MetaContrastWrapper(PacedWrapper):
         super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
         self.weights = EtaWeights(eta, device=self.device, min=np.log(min_eta), max=max_eta)
-        self.logs['eta'] = eta
+        self.logs['eta'] = []
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []
         self.logs['lr'] = []
