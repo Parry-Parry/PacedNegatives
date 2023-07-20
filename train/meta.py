@@ -17,6 +17,7 @@ def main(
         batch_size : int = 32, 
         lr : float = 0.001, 
         max=False, 
+        sample : bool = False,
         eta=-np.log(0.5)*0.5, 
         min_eta=0.01, 
         max_eta=15,
@@ -49,6 +50,8 @@ def main(
     with open(data, 'r') as f:
         dataset = pd.read_json(f, orient='records', lines=True, dtype={'query_id': str, 'doc_id_a': str, 'doc_id_b': list})
     corpus = irds.load(dataset_name)
+
+    if sample: dataset = dataset.sample(frac=1).reset_index(drop=True)
 
     pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
     neg_idx = dataset['doc_id_b'].values
