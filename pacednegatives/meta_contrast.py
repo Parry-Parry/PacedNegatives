@@ -123,7 +123,7 @@ class MetaContrastWrapper(PacedWrapper):
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
 
-                self.running_rate.append(self.difficulty)
+               
                 if i % self.rate_check == 0:
                     success_rate = np.mean(self.running_rate)
                     if success_rate > self.threshold:
