@@ -127,7 +127,7 @@ class MetaContrastWrapper(PacedWrapper):
                 if i % self.rate_check == 0:
                     success_rate = np.mean(self.running_rate)
                     if success_rate > self.threshold:
-                        self.difficulty = max(1., (self.difficulty + (1 / train_loader.dataset.n_neg)))
+                        self.difficulty = min(1., (self.difficulty + (1 / train_loader.dataset.n_neg)))
                     self.running_rate = []
 
                 pbar.set_postfix({'loss': np.mean(self.logs['loss']['main'])})
