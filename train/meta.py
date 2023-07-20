@@ -1,5 +1,5 @@
 from fire import Fire
-from pacednegatives.meta_contrast import MetaWrapper
+from pacednegatives.meta_contrast import MetaContrastWrapper
 from pacednegatives.dataloader import TripletDataset, LevelLoader
 import os
 import json
@@ -13,7 +13,6 @@ def main(
         data : str, 
         dataset_name, 
         out_dir : str, 
-        epochs : int = 10, 
         batch_size : int = 32, 
         lr : float = 0.001, 
         max=True, 
@@ -22,7 +21,8 @@ def main(
         max_eta=15,
         threshold=0.5,
         rate_check=1000,
-        warmup_steps=0):
+        training_steps=100000,
+        warmup_steps=2500):
 
     os.makedirs(out_dir, exist_ok=True)
 
@@ -44,8 +44,8 @@ def main(
 
     ## TRAIN ##
 
-    trainer = MetaWrapper(eta, min_eta, max_eta, rate_check, threshold, dataset_name, 'monoT5', batch_size, init, tokenizer, lr, -100)
-    logs = trainer.train(loader, epochs, warmup_steps=warmup_steps)
+    trainer = MetaContrastWrapper(eta, min_eta, max_eta, rate_check, threshold, dataset_name, 'monoT5', batch_size, init, tokenizer, lr, -100)
+    logs = trainer.train(loader, training_steps, warmup_steps=warmup_steps)
 
     trainer.model.save_pretrained(os.path.join(out_dir, 'model'))
 
