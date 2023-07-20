@@ -65,7 +65,7 @@ class MetaContrastWrapper(PacedWrapper):
         pce = self.loss_fn(plogits.view(-1, plogits.size(-1)), o_p.view(-1))
         nce = self.loss_fn(nlogits.view(-1, nlogits.size(-1)), o_n.view(-1))
         print(pce.shape)
-        ce = torch.mean(torch.div(pce+nce, 2))
+        ce = torch.div(pce+nce, 2)
         v = self.weights.forward(loss=ce)
 
         weighted_ce = torch.sum(ce * v) / len(ce)
