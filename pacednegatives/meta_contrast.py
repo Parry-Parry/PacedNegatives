@@ -130,7 +130,7 @@ class MetaContrastWrapper(PacedWrapper):
                         self.difficulty += (1 / train_loader.dataset.n_neg)
                     self.running_rate = []
 
-                 pbar.set_postfix({'loss': np.mean(self.logs['loss']['main'])})
+                pbar.set_postfix({'loss': np.mean(self.logs['loss']['main'])})
                 pbar.update(self.train_loader.batch_size)
 
         end = time.time() - start
