@@ -52,7 +52,7 @@ class MetaContrastWrapper(PacedWrapper):
     def meta_loop(self, j):
 
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
-        print(px.shape)
+ 
         '''
         with torch.no_grad():
             plogits = self.meta_model(input_ids=px, labels=o_p).logits
@@ -61,10 +61,10 @@ class MetaContrastWrapper(PacedWrapper):
         with torch.no_grad():
             plogits = self.model(input_ids=px, labels=o_p).logits
             nlogits = self.model(input_ids=nx, labels=o_n).logits
-        print(plogits.shape)
+
         pce = self.loss_fn(plogits.view(-1, plogits.size(-1)), o_p.view(-1))
         nce = self.loss_fn(nlogits.view(-1, nlogits.size(-1)), o_n.view(-1))
-        print(pce.shape)
+      
         ce = torch.div(pce+nce, 2)
         v = self.weights.forward(loss=ce)
 
