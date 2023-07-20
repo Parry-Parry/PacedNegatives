@@ -116,7 +116,7 @@ class MetaContrastWrapper(PacedWrapper):
                 loss = self.main_loop(i)
 
                 if wandb.run is not None:
-                    wandb.log({'loss': loss, 'lr': self.scheduler.get_last_lr()[0], 'difficulty': self.difficulty, 'success_rate' : self.running_rate[-1]})
+                    wandb.log({'loss': loss, 'lr': self.scheduler.get_last_lr()[0], 'difficulty': self.difficulty, 'success_rate' : self.running_rate[-1], 'eta' : self.weights.eta.item()})
 
                 self.logs['loss']['main'].append(loss)
                 self.logs['lr'].append(self.scheduler.get_last_lr()[0])
