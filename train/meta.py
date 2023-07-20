@@ -53,6 +53,8 @@ def main(
     pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
     neg_idx = dataset['doc_id_b'].values
 
+    print(neg_idx.shape)
+
     dataset = TripletDataset(pairs, neg_idx, corpus, max)
     loader = LevelLoader(dataset, batch_size)
 
