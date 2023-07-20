@@ -16,7 +16,7 @@ def main(
         out_dir : str, 
         batch_size : int = 32, 
         lr : float = 0.001, 
-        max=True, 
+        max=False, 
         eta=-np.log(0.5)*0.5, 
         min_eta=0.01, 
         max_eta=15,
