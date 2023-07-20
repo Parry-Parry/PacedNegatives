@@ -8,6 +8,7 @@ import ir_datasets as irds
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 import logging
 import numpy as np
+import wandb
 
 def main(
         data : str, 
@@ -22,17 +23,35 @@ def main(
         threshold=0.5,
         rate_check=1000,
         training_steps=100000,
-        warmup_steps=2500):
+        warmup_steps=2500, 
+        wandb_project=None,):
 
     os.makedirs(out_dir, exist_ok=True)
 
+    if wandb_project is not None:
+        wandb.init(project=wandb_project, config={
+                'variant': data.split('/')[-1],
+                'dataset': dataset_name,
+                'total_steps': training_steps,
+                'batch_size': batch_size,
+                'lr': lr,
+                'max': max,
+                'warmup_steps': warmup_steps,
+                'eta': eta,
+                'min_eta': min_eta,
+                'max_eta': max_eta,
+                'threshold': threshold,
+                'rate_check': rate_check,
+            })
+
     ## INIT DATA ##
 
-    dataset = pd.read_json(data, orient='records', lines=True)
+    with open(data, 'r') as f:
+        dataset = pd.read_json(f, orient='records', lines=True, dtype={'query_id': str, 'doc_id_a': str, 'doc_id_b': list})
     corpus = irds.load(dataset_name)
 
     pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
-    neg_idx = dataset['doc_id_b'].values.to_numpy()
+    neg_idx = dataset['doc_id_b'].values
 
     dataset = TripletDataset(pairs, neg_idx, corpus, max)
     loader = LevelLoader(dataset, batch_size)
@@ -44,7 +63,19 @@ def main(
 
     ## TRAIN ##
 
-    trainer = MetaContrastWrapper(eta, min_eta, max_eta, rate_check, threshold, dataset_name, 'monoT5', batch_size, init, tokenizer, lr, -100)
+    trainer = MetaContrastWrapper(eta, 
+                                  min_eta, 
+                                  max_eta, 
+                                  rate_check, 
+                                  threshold, 
+                                  dataset_name, 
+                                  'monoT5', 
+                                  batch_size, 
+                                  init, 
+                                  tokenizer, 
+                                  lr, 
+                                  -100)
+    
     logs = trainer.train(loader, training_steps, warmup_steps=warmup_steps)
 
     trainer.model.save_pretrained(os.path.join(out_dir, 'model'))
