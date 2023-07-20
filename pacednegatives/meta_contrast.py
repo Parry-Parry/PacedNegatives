@@ -47,7 +47,7 @@ class MetaContrastWrapper(PacedWrapper):
         self.threshold = threshold
 
     def check_success_rate(self, loss):
-        self.running_rate.append(np.sum(loss < self.weights.eta.item()) / len(loss))
+        self.running_rate.append(torch.mean((loss < self.weights.eta.item()).float()).item())
 
     def meta_loop(self, j):
 
