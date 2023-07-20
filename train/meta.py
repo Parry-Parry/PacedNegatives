@@ -7,6 +7,7 @@ import pandas as pd
 import ir_datasets as irds
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 import logging
+import numpy as np
 
 def main(
         data : str, 
@@ -16,7 +17,7 @@ def main(
         batch_size : int = 32, 
         lr : float = 0.001, 
         max=True, 
-        eta=0.1, 
+        eta=-np.log(0.5)*0.5, 
         min_eta=0.01, 
         max_eta=15,
         threshold=0.5,
