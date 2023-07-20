@@ -53,10 +53,8 @@ def main(
 
     if sample: dataset = dataset.sample(frac=1).reset_index(drop=True)
 
-    pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
-    neg_idx = dataset['doc_id_b'].values
-
-    print(neg_idx.shape)
+    pairs = dataset[['query_id', 'doc_id_a']].tolist()
+    neg_idx = dataset['doc_id_b'].values.reshape(-1, 50)
 
     dataset = TripletDataset(pairs, neg_idx, corpus, max)
     loader = LevelLoader(dataset, batch_size)
