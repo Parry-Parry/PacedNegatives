@@ -1,6 +1,6 @@
 from fire import Fire
-from pacednegatives.pairwrapper import MetaWrapper
-from pacednegatives.dataloader import TripletDataset, PairLoader
+from pacednegatives.meta_contrast import MetaWrapper
+from pacednegatives.dataloader import TripletDataset, LevelLoader
 import os
 import json
 import pandas as pd
@@ -19,6 +19,8 @@ def main(
         eta=0.1, 
         min_eta=0.01, 
         max_eta=15,
+        threshold=0.5,
+        rate_check=1000,
         warmup_steps=0):
 
     os.makedirs(out_dir, exist_ok=True)
@@ -32,7 +34,7 @@ def main(
     neg_idx = dataset['doc_id_b'].values.to_numpy()
 
     dataset = TripletDataset(pairs, neg_idx, corpus, max)
-    loader = PairLoader(dataset, batch_size)
+    loader = LevelLoader(dataset, batch_size)
 
     ## INIT MODEL ##
 
@@ -41,7 +43,7 @@ def main(
 
     ## TRAIN ##
 
-    trainer = MetaWrapper(eta, min_eta, max_eta, dataset_name, 'monoT5', batch_size, init, tokenizer, lr, -100)
+    trainer = MetaWrapper(eta, min_eta, max_eta, rate_check, threshold, dataset_name, 'monoT5', batch_size, init, tokenizer, lr, -100)
     logs = trainer.train(loader, epochs, warmup_steps=warmup_steps)
 
     trainer.model.save_pretrained(os.path.join(out_dir, 'model'))
