@@ -50,12 +50,16 @@ class MetaContrastWrapper(PacedWrapper):
         self.running_rate.append(np.sum(loss < self.weights.eta.item()) / len(loss))
 
     def meta_loop(self, j):
-        px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
 
+        px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
+        '''
         with torch.no_grad():
             plogits = self.meta_model(input_ids=px, labels=o_p).logits
             nlogits = self.meta_model(input_ids=nx, labels=o_n).logits
-        
+        '''
+        with torch.no_grad():
+            plogits = self.model(input_ids=px, labels=o_p).logits
+            nlogits = self.model(input_ids=nx, labels=o_n).logits
         pce = self.loss_fn(plogits.view(-1, plogits.size(-1)), o_p.view(-1))
         nce = self.loss_fn(nlogits.view(-1, nlogits.size(-1)), o_n.view(-1))
 
@@ -84,10 +88,10 @@ class MetaContrastWrapper(PacedWrapper):
 
         self.check_success_rate(ce)
         
-        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         self.scheduler.step()
+        self.optimizer.zero_grad()
 
         return loss.item()
 
