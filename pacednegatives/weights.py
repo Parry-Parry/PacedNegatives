@@ -8,10 +8,9 @@ from torch.autograd import Variable
 gen_var = lambda x, y : Variable(x, requires_grad=y)
 
 class EtaWeights(nn.Module):
-    def __init__(self, eta : float, shape, batch_size, device = None, min=np.log(2), max=10):
+    def __init__(self, eta : float, device = None, min=np.log(2), max=10):
         super().__init__()
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.batch_size = batch_size
         self.register_parameter(
             'eta_value',
             torch.nn.Parameter(
@@ -21,7 +20,6 @@ class EtaWeights(nn.Module):
         self.eta =  torch.tensor([eta], requires_grad=True).to(device)
 
         self.weighting = lambda x, y : (-x/y) + 1
-        self.weights = torch.nn.Parameter(torch.ones(shape).to(self.device), requires_grad=False)
 
     def no_grad(self, loss, eta):
         with torch.no_grad():
