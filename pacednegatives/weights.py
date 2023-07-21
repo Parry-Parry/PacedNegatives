@@ -26,7 +26,7 @@ class EtaWeights(nn.Module):
             weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
             for i in range(len(loss)):
                 if loss[i] > eta:
-                    pass
+                    weight[i] = loss[i] * torch.zeros(1).to(self.device) * eta
                 else:
                     weight[i]  = self.weighting(loss[i], eta)
             return weight
@@ -36,7 +36,7 @@ class EtaWeights(nn.Module):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                weight[i] = torch.zeros(1).to(self.device).requires_grad_() * self.eta
+                weight[i] = loss[i] * torch.zeros(1).to(self.device).requires_grad_() * self.eta
             else:
                 weight[i] = self.weighting(loss[i], self.eta)
 

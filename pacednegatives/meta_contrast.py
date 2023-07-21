@@ -86,7 +86,8 @@ class MetaContrastWrapper(PacedWrapper):
         nce = self.loss_fn(logits_n.view(-1, logits_n.size(-1)), o_n.view(-1))
         
         ce = torch.div(pce+nce, 2)
-        loss = torch.mean(pce) + torch.mean(nce)
+        v = self.weights.no_grad(ce, self.weights.eta)
+        loss = torch.mean(pce * v) + torch.mean(nce * v)
 
         self.check_success_rate(ce)
         
