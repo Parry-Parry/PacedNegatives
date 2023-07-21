@@ -18,15 +18,19 @@ class EtaWeights(nn.Module):
                 requires_grad=True))
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
         self.eta =  torch.tensor([eta], requires_grad=True).to(device)
+        self.mask = torch.Tensor(0.).to(self.device)
 
         self.weighting = lambda x, y : (-x/y) + 1
+    
+    def set_mask(self, mask):
+        self.mask = torch.Tensor(mask).to(self.device)
 
     def no_grad(self, loss, eta):
         with torch.no_grad():
             weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
             for i in range(len(loss)):
                 if loss[i] > eta:
-                    weight[i] = loss[i] * torch.zeros(1).to(self.device) * eta
+                    weight[i] = loss[i] * self.mask * eta
                 else:
                     weight[i]  = self.weighting(loss[i], eta)
             return weight
@@ -36,7 +40,7 @@ class EtaWeights(nn.Module):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                weight[i] = loss[i] * torch.zeros(1).to(self.device).requires_grad_() * self.eta
+                weight[i] = loss[i] * self.mask.requires_grad_() * self.eta
             else:
                 weight[i] = self.weighting(loss[i], self.eta)
 
