@@ -11,7 +11,7 @@ class EtaWeights(nn.Module):
     def __init__(self, eta : float, device = None, min=np.log(2), max=10):
         super().__init__()
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.eta =  torch.nn.Parameter(torch.tensor([0.6]), requires_grad=True).to(device)
+        self.eta = nn.Parameter(torch.tensor([0.6]).to(device), requires_grad=True)
         self.register_parameter(
                 'eta_value', self.eta)
         self.clamp = lambda x : torch.clamp(x, min=min, max=max)
