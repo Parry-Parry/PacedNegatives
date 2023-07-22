@@ -48,7 +48,7 @@ class MetaContrastWrapper(PacedWrapper):
         self.threshold = threshold
 
         self.meta_lr = meta_lr
-        self.meta_optimizer = torch.optim.Adam([self.weights.eta], lr=self.meta_lr)
+        self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
 
     def check_success_rate(self, loss):
         self.running_rate.append(torch.mean((loss < self.weights.eta.item()).float()).item())
