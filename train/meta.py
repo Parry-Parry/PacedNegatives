@@ -18,7 +18,7 @@ def main(
         lr : float = 0.001, 
         max=False, 
         sample : bool = False,
-        eta=-np.log(0.5)*0.5, 
+        n_class=2, 
         min_eta=0.01, 
         max_eta=15,
         threshold=0.5,
@@ -28,6 +28,8 @@ def main(
         wandb_project=None,):
 
     os.makedirs(out_dir, exist_ok=True)
+
+    eta = -np.log(1/n_class) * batch_size 
 
     if wandb_project is not None:
         wandb.init(project=wandb_project, config={
