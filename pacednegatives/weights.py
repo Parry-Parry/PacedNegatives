@@ -8,16 +8,17 @@ from torch.autograd import Variable
 gen_var = lambda x, y : Variable(x, requires_grad=y)
 
 class EtaWeights(nn.Module):
-    def __init__(self, eta : float, device = None, min=np.log(2), max=10):
+    def __init__(self, eta : float, device = None, min=-np.log(0.5)*0.5, max=10):
         super().__init__()
         self.device = device if device else torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.eta = nn.Parameter(torch.tensor([0.6]).to(device), requires_grad=True)
-        self.register_parameter(
-                'eta_value', self.eta)
-        self.clamp = lambda x : torch.clamp(x, min=min, max=max)
+        self.eta = nn.Parameter(torch.tensor([eta]).to(device), requires_grad=True)
+        self.register_parameter('eta_value', self.eta)
+        self.clamp_func = lambda x : torch.clamp(x, min=min, max=max)
         self.mask = torch.tensor([0.], requires_grad=False).to(self.device)
-
         self.weighting = lambda x, y : (-x/y) + 1
+    
+    def clamp(self):
+        self.eta.data = self.clamp_func(self.eta.data)
     
     def set_mask(self, mask : float):
         self.mask = torch.tensor([mask], requires_grad=False).to(self.device)
@@ -29,7 +30,7 @@ class EtaWeights(nn.Module):
                 if loss[i] > eta:
                     weight[i] = loss[i] * self.mask * eta
                 else:
-                    weight[i]  = self.weighting(loss[i], eta)
+                    weight[i] = self.weighting(loss[i], eta)
             return weight
     
     def forward(self, loss=None):

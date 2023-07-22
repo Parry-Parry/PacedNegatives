@@ -21,7 +21,7 @@ def main(
         sample : bool = False,
         n_class=2, 
         min_eta=0.01, 
-        max_eta=15,
+        max_eta=10,
         threshold=0.5,
         rate_check=1000,
         training_steps=100000,
@@ -30,7 +30,7 @@ def main(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    eta = -np.log(1/n_class) 
+    eta = -np.log(1/n_class) * 1/n_class
 
     if wandb_project is not None:
         wandb.init(project=wandb_project, config={

@@ -71,11 +71,14 @@ class MetaContrastWrapper(PacedWrapper):
       
         ce = torch.div(pce+nce, 2)
         v = self.weights.forward(loss=ce)
-        weighted_ce = torch.mean(pce * v) + torch.mean(nce * v)
+        #weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) - torch.sum(v)
+        weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) 
 
         weighted_ce.backward()
         self.meta_optimizer.step()
         self.meta_optimizer.zero_grad()
+
+        self.weights.clamp()
         #grads = grad(weighted_ce, (self.weights.eta, ), create_graph=True, retain_graph=True)
         #self.weights.eta = self.weights.clamp(self.weights.eta - self.meta_scheduler.get_last_lr()[0] * grads[0])
         #del grads
