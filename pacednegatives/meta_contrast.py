@@ -8,16 +8,6 @@ from torch.autograd import grad
 from transformers import get_linear_schedule_with_warmup
 from pacednegatives.pairwrapper import PacedWrapper
 from pacednegatives.weights import EtaWeights
-
-def interpolate_scalar(start_value, end_value, num_steps):
-    step_size = (end_value - start_value) / num_steps
-    
-    def get_interpolated_value(step):
-        if step > num_steps:
-            return end_value
-        return start_value + step * step_size
-    
-    return get_interpolated_value
     
 class MetaContrastWrapper(PacedWrapper):
     def __init__(self, 
@@ -74,6 +64,7 @@ class MetaContrastWrapper(PacedWrapper):
         del grads
 
         self.logs['loss']['meta'].append(weighted_ce.item())
+        return weighted_ce.item()
 
     def main_loop(self, j):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
@@ -112,11 +103,11 @@ class MetaContrastWrapper(PacedWrapper):
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
             for i in range(total_steps//self.train_loader.batch_size):
                 
-                self.meta_loop(i)
+                meta_loss = self.meta_loop(i)
                 loss = self.main_loop(i)
 
                 if wandb.run is not None:
-                    wandb.log({'loss': loss, 'lr': self.scheduler.get_last_lr()[0], 'difficulty': self.difficulty, 'success_rate' : self.running_rate[-1], 'eta' : self.weights.eta.item()})
+                    wandb.log({'loss': loss, 'meta_loss' : meta_loss, 'lr': self.scheduler.get_last_lr()[0], 'difficulty': self.difficulty, 'success_rate' : self.running_rate[-1], 'eta' : self.weights.eta.item()})
 
                 self.logs['loss']['main'].append(loss)
                 self.logs['lr'].append(self.scheduler.get_last_lr()[0])
