@@ -29,7 +29,7 @@ def main(
 
     os.makedirs(out_dir, exist_ok=True)
 
-    eta = -np.log(1/n_class) * batch_size 
+    eta = -np.log(1/n_class) 
 
     if wandb_project is not None:
         wandb.init(project=wandb_project, config={
