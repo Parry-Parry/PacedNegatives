@@ -16,6 +16,7 @@ def main(
         out_dir : str, 
         batch_size : int = 32, 
         lr : float = 0.001, 
+        meta_lr : float = 0.1,
         max=False, 
         sample : bool = False,
         n_class=2, 
@@ -79,6 +80,7 @@ def main(
                                   init, 
                                   tokenizer, 
                                   lr, 
+                                  meta_lr,
                                   -100)
     
     logs = trainer.train(loader, training_steps, warmup_steps=warmup_steps)

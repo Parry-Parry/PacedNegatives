@@ -32,6 +32,7 @@ class MetaContrastWrapper(PacedWrapper):
                  model_init, 
                  tokenizer, 
                  lr, 
+                 meta_lr,
                  ignore_index) -> None:
         super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
@@ -39,12 +40,15 @@ class MetaContrastWrapper(PacedWrapper):
         self.logs['eta'] = []
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []
-        self.logs['lr'] = []
+        self.logs['lr'] = {'main': [], 'meta' : []}
         self.logs['success_rate'] = []
 
         self.running_rate = []
         self.rate_check = rate_check
         self.threshold = threshold
+
+        self.meta_lr = meta_lr
+        self.meta_optimizer = torch.optim.Adam([self.weights.eta], lr=self.meta_lr)
 
     def check_success_rate(self, loss):
         self.running_rate.append(torch.mean((loss < self.weights.eta.item()).float()).item())
@@ -69,9 +73,14 @@ class MetaContrastWrapper(PacedWrapper):
         v = self.weights.forward(loss=ce)
         weighted_ce = torch.mean(pce * v) + torch.mean(nce * v)
 
-        grads = grad(weighted_ce, (self.weights.eta, ), create_graph=True, retain_graph=True)
-        self.weights.eta = self.weights.clamp(self.weights.eta - self.scheduler.get_last_lr()[0] * grads[0])
-        del grads
+        weighted_ce.backward()
+        self.meta_optimizer.step()
+        self.meta_optimizer.zero_grad()
+        #grads = grad(weighted_ce, (self.weights.eta, ), create_graph=True, retain_graph=True)
+        #self.weights.eta = self.weights.clamp(self.weights.eta - self.meta_scheduler.get_last_lr()[0] * grads[0])
+        #del grads
+
+        self.meta_scheduler.step()
 
         self.logs['loss']['meta'].append(weighted_ce.item())
         return weighted_ce.item()
@@ -108,6 +117,9 @@ class MetaContrastWrapper(PacedWrapper):
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
+        self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
+                                                         num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
+                                                         num_training_steps=total_steps)
         #mask_schedule = interpolate_scalar(1.0, 0.0, warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100))
         
         start = time.time()
@@ -119,10 +131,11 @@ class MetaContrastWrapper(PacedWrapper):
                 loss = self.main_loop(i)
 
                 if wandb.run is not None:
-                    wandb.log({'loss': loss, 'meta_loss' : meta_loss, 'lr': self.scheduler.get_last_lr()[0], 'difficulty': self.difficulty, 'success_rate' : self.running_rate[-1], 'eta' : self.weights.eta.item()})
+                    wandb.log({'loss': loss, 'meta_loss' : meta_loss, 'lr': self.scheduler.get_last_lr()[0], 'meta_lr' : self.meta_scheduler.get_last_lr()[0], 'difficulty': self.difficulty, 'success_rate' : self.running_rate[-1], 'eta' : self.weights.eta.item()})
 
                 self.logs['loss']['main'].append(loss)
-                self.logs['lr'].append(self.scheduler.get_last_lr()[0])
+                self.logs['lr']['main'].append(self.scheduler.get_last_lr()[0])
+                self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
 
