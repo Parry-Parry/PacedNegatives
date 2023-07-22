@@ -71,8 +71,8 @@ class MetaContrastWrapper(PacedWrapper):
       
         ce = torch.div(pce+nce, 2)
         v = self.weights.forward(loss=ce)
-        #weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) - torch.sum(v)
-        weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) 
+        weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) - torch.sum(v)
+        #weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) 
 
         weighted_ce.backward()
         self.meta_optimizer.step()
