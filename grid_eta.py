@@ -7,7 +7,7 @@ def main(script, data, dataset, out_dir, batch_size=16, lr=0.001, wandb_project=
 
     for s in start:
         out = join(out_dir, f'paced_{s}')
-        args = f'python {script} --data {data} --dataset_name {dataset} --out_dir {out} --batch_size {batch_size} --lr {lr}  --wandb_project {wandb_project}'
+        args = f'python {script} --data {data} --dataset_name {dataset} --out_dir {out} --batch_size {batch_size} --lr {lr}  --wandb_project {wandb_project} --eta {s}'
         if sample: args += ' --sample'
         sp.run(args, shell=True)
 
