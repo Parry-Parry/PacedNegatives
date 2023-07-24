@@ -16,21 +16,15 @@ def main(
         out_dir : str, 
         batch_size : int = 32, 
         lr : float = 0.001, 
-        meta_lr : float = 0.1,
+        meta_lr : float = 0.001,
         max=False, 
         sample : bool = False,
-        n_class=2, 
-        min_eta=0.01, 
-        max_eta=10,
-        threshold=0.5,
-        rate_check=1000,
+        eta = 0.5,
         training_steps=100000,
         warmup_steps=2500, 
         wandb_project=None,):
 
     os.makedirs(out_dir, exist_ok=True)
-
-    eta = -np.log(1/n_class) * 1/n_class
 
     if wandb_project is not None:
         wandb.init(project=wandb_project, config={
@@ -42,10 +36,6 @@ def main(
                 'max': max,
                 'warmup_steps': warmup_steps,
                 'eta': eta,
-                'min_eta': min_eta,
-                'max_eta': max_eta,
-                'threshold': threshold,
-                'rate_check': rate_check,
             })
 
     ## INIT DATA ##
@@ -69,19 +59,15 @@ def main(
 
     ## TRAIN ##
 
-    trainer = EtaWrapper(eta, 
-                                  min_eta, 
-                                  max_eta, 
-                                  rate_check, 
-                                  threshold, 
-                                  dataset_name, 
-                                  'monoT5', 
-                                  batch_size, 
-                                  init, 
-                                  tokenizer, 
-                                  lr, 
-                                  meta_lr,
-                                  -100)
+    trainer = EtaWrapper(eta,           
+                        dataset_name, 
+                        'monoT5', 
+                        batch_size, 
+                        init, 
+                        tokenizer, 
+                        lr, 
+                        meta_lr,
+                        -100)
     
     logs = trainer.train(loader, training_steps, warmup_steps=warmup_steps)
 
