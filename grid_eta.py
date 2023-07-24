@@ -1,9 +1,10 @@
 from fire import Fire
 import subprocess as sp
 from os.path import join
+import numpy as np
 
 def main(script, data, dataset, out_dir, batch_size=16, lr=0.001, wandb_project=None, sample=False):
-    start = [0.0001, 0.1, 0.2, 0.3, 0.4, 0.5]
+    start = [-np.log(0.5)*0.5, 0.1, 0.2, 0.3, 0.4, 0.5]
     meta_lrs = [0.0001, 0.0005, 0.001, 0.005, 0.01]
 
     for meta_lr in meta_lrs:
