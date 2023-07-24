@@ -135,13 +135,13 @@ class MetaContrastWrapper(PacedWrapper):
         self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
-        mask_schedule = interpolate_scalar(1.0, 0.0, warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100))
+        #mask_schedule = interpolate_scalar(1.0, 0.0, warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100))
         
         start = time.time()
         
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
             for i in range(total_steps//self.train_loader.batch_size):
-                self.weights.set_mask(mask_schedule(i))
+                #self.weights.set_mask(mask_schedule(i))
                 meta_loss = self.meta_loop(i)
                 loss = self.main_loop(i)
 
