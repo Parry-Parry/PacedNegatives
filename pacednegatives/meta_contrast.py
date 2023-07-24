@@ -110,9 +110,9 @@ class MetaContrastWrapper(PacedWrapper):
         self.check_probs(plogits, nlogits)
 
         ce = torch.div(pce+nce, 2)
-        v = self.weights.no_grad(ce, self.weights.eta)
-        loss = torch.mean(pce * v) + torch.mean(nce * v)
-        # loss = torch.mean(pce) + torch.mean(nce)
+        #v = self.weights.no_grad(ce, self.weights.eta)
+        #loss = torch.mean(pce * v) + torch.mean(nce * v)
+        loss = torch.mean(pce) + torch.mean(nce)
 
         self.check_success_rate(ce)
         
