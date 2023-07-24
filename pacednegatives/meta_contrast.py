@@ -42,13 +42,23 @@ class MetaContrastWrapper(PacedWrapper):
         self.logs['difficulty'] = []
         self.logs['lr'] = {'main': [], 'meta' : []}
         self.logs['success_rate'] = []
+        self.logs['probs'] = []
 
         self.running_rate = []
         self.rate_check = rate_check
         self.threshold = threshold
 
+        self.REL = self.tokenizer.encode('true')[0]
+        self.NREL = self.tokenizer.encode('false')[0]
+
         self.meta_lr = meta_lr
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
+
+    def check_probs(self, pos, neg):
+        pos_probs = pos[:, 0, (self.REL, self.NREL)].softmax(dim=-1)[:, 0]
+        neg_probs = neg[:, 0, (self.REL, self.NREL)].softmax(dim=-1)[:, 0]
+
+        self.logs['probs'].append(torch.mean((pos_probs > neg_probs).float()).item())
 
     def check_success_rate(self, loss):
         self.running_rate.append(torch.mean((loss < self.weights.eta.item()).float()).item())
@@ -91,16 +101,18 @@ class MetaContrastWrapper(PacedWrapper):
     def main_loop(self, j):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
 
-        logits_p = self.model(input_ids=px, labels=o_p).logits
-        pce = self.loss_fn(logits_p.view(-1, logits_p.size(-1)), o_p.view(-1))
+        plogits = self.model(input_ids=px, labels=o_p).logits
+        pce = self.loss_fn(plogits.view(-1, plogits.size(-1)), o_p.view(-1))
 
-        logits_n = self.model(input_ids=nx, labels=o_n).logits
-        nce = self.loss_fn(logits_n.view(-1, logits_n.size(-1)), o_n.view(-1))
+        nlogits = self.model(input_ids=nx, labels=o_n).logits
+        nce = self.loss_fn(nlogits.view(-1, nlogits.size(-1)), o_n.view(-1))
         
+        self.check_probs(plogits, nlogits)
+
         ce = torch.div(pce+nce, 2)
-        # v = self.weights.no_grad(ce, self.weights.eta)
-        # loss = torch.mean(pce * v) + torch.mean(nce * v)
-        loss = torch.mean(pce) + torch.mean(nce)
+        v = self.weights.no_grad(ce, self.weights.eta)
+        loss = torch.mean(pce * v) + torch.mean(nce * v)
+        # loss = torch.mean(pce) + torch.mean(nce)
 
         self.check_success_rate(ce)
         
@@ -123,25 +135,31 @@ class MetaContrastWrapper(PacedWrapper):
         self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
-        #mask_schedule = interpolate_scalar(1.0, 0.0, warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100))
+        mask_schedule = interpolate_scalar(1.0, 0.0, warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100))
         
         start = time.time()
         
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
             for i in range(total_steps//self.train_loader.batch_size):
-                #self.weights.set_mask(mask_schedule(i))
+                self.weights.set_mask(mask_schedule(i))
                 meta_loss = self.meta_loop(i)
                 loss = self.main_loop(i)
 
                 if wandb.run is not None:
-                    wandb.log({'loss': loss, 'meta_loss' : meta_loss, 'lr': self.scheduler.get_last_lr()[0], 'meta_lr' : self.meta_scheduler.get_last_lr()[0], 'difficulty': self.difficulty, 'success_rate' : self.running_rate[-1], 'eta' : self.weights.eta.item()})
+                    wandb.log({'loss': loss, 
+                               'meta_loss' : meta_loss, 
+                               'lr': self.scheduler.get_last_lr()[0], 
+                               'meta_lr' : self.meta_scheduler.get_last_lr()[0], 
+                               'difficulty': self.difficulty, 
+                               'success_rate' : self.running_rate[-1], 
+                               'eta' : self.weights.eta.item(),
+                               'probs' : self.logs['probs'][-1]})
 
                 self.logs['loss']['main'].append(loss)
                 self.logs['lr']['main'].append(self.scheduler.get_last_lr()[0])
                 self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
-
                
                 if i % self.rate_check == 0:
                     success_rate = np.mean(self.running_rate)

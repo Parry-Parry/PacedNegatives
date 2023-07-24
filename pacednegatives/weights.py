@@ -25,7 +25,7 @@ class EtaWeights(nn.Module):
 
     def no_grad(self, loss, eta):
         with torch.no_grad():
-            weight = gen_var(torch.zeros(loss.size()), True).to(self.device)
+            weight = gen_var(torch.zeros(loss.size()), False).to(self.device)
             for i in range(len(loss)):
                 if loss[i] > eta:
                     weight[i] = loss[i] * self.mask * eta
