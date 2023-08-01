@@ -43,3 +43,6 @@ def take_balanced_subset(triples, num_docs=10):
     triples = triples.copy()
     triples['doc_id_b'] = triples['doc_id_b'].apply(lambda x : get_balanced_idx(x, num_docs))
     return triples
+
+def lce_loss(plogits, nlogits):
+    
