@@ -3,13 +3,13 @@ import torch
 import numpy as np
 import ir_datasets
 import wandb
-from torch.autograd import grad
+from torch.autograd import Variable, grad
 
 from transformers import get_linear_schedule_with_warmup
 from pacednegatives.pairwrapper import PacedWrapper
 from pacednegatives.weights import EtaWeights
 
-class EtaWrapper(PacedWrapper):
+class LCEWrapper(PacedWrapper):
     def __init__(self, 
                  eta,
                  dataset, 
@@ -47,9 +47,26 @@ class EtaWrapper(PacedWrapper):
     def check_success_rate(self, loss):
         self.running_rate.append(torch.mean((loss < self.weights.eta.item()).float()).item())
 
+    def prep_batch(self, batch):
+        px, nx = batch
+
+        px = self.tokenizer(px, padding=True, return_tensors='pt').input_ids.to(self.device)
+        o_p = self.tokenizer(['true'] * len(px), padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
+
+        nx = self.tokenizer(nx, padding=True, return_tensors='pt').input_ids.to(self.device)
+        o_n = self.tokenizer(o_n, padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
+
+        px = Variable(px, requires_grad=False)
+        nx = Variable(nx, requires_grad=False)
+        o_p = Variable(o_p, requires_grad=False)
+        o_n = Variable(o_n, requires_grad=False)
+
+        return px, nx, o_p, o_n
+        
+
     def meta_loop(self, j):
 
-        px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
+        px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
         '''
         with torch.no_grad():
@@ -57,18 +74,19 @@ class EtaWrapper(PacedWrapper):
             nlogits = self.meta_model(input_ids=nx, labels=o_n).logits
         '''
         with torch.no_grad():
-            plogits = self.model(input_ids=px, labels=o_p).logits
-            nlogits = self.model(input_ids=nx, labels=o_n).logits
+            plogits = self.model(input_ids=px, labels=op).logits
+            nlogits = self.model(input_ids=nx, labels=on).logits
 
-        pce = self.loss_fn(plogits.view(-1, plogits.size(-1)), o_p.view(-1))
-        nce = self.loss_fn(nlogits.view(-1, nlogits.size(-1)), o_n.view(-1))
+        loss = self.loss(plogits, nlogits, op, on, self.weights)
+        '''
+        pce = self.loss_fn(plogits.view(-1, plogits.size(-1)), op.view(-1))
+        nce = self.loss_fn(nlogits.view(-1, nlogits.size(-1)), on.view(-1))
       
         ce = torch.div(pce+nce, 2)
         v = self.weights.forward(loss=ce)
         weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) - torch.sum(v)
-        #weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) 
-
-        weighted_ce.backward()
+        '''
+        loss.backward()
         self.meta_optimizer.step()
         self.meta_optimizer.zero_grad()
 
@@ -79,8 +97,8 @@ class EtaWrapper(PacedWrapper):
 
         self.meta_scheduler.step()
 
-        self.logs['loss']['meta'].append(weighted_ce.item())
-        return weighted_ce.item()
+        self.logs['loss']['meta'].append(loss.item())
+        return loss.item()
 
     def main_loop(self, j):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
@@ -119,13 +137,12 @@ class EtaWrapper(PacedWrapper):
         self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
-        #mask_schedule = interpolate_scalar(1.0, 0.0, warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100))
         
         start = time.time()
         
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
             for i in range(total_steps//self.train_loader.batch_size):
-                #self.weights.set_mask(mask_schedule(i))
+
                 meta_loss = self.meta_loop(i)
                 loss = self.main_loop(i)
 
