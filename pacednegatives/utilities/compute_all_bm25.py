@@ -15,7 +15,7 @@ def compute_all_bm25(index_path : str,
    
     os.makedirs(output_path, exist_ok=True)
 
-    index = PisaIndex(index_path, threads=threads)
+    index = PisaIndex.from_dataset(index_path, threads=threads)
     model = index.bm25() % cutoff
 
     ds = irds.load(dataset)

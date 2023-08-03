@@ -17,7 +17,7 @@ def compute_all_bm25(index_path : str,
    
     os.makedirs(output_path, exist_ok=True)
 
-    index = PisaIndex(index_path, threads=threads)
+    index = PisaIndex.from_dataset(index_path, threads=threads)
     splade = SpladeFactory(model_name_or_path)
     model = splade.query_encoder(scale=100.) >> index.quantized() % cutoff  
 
