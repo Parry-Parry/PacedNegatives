@@ -7,34 +7,37 @@ from pyt_splade import SpladeFactory
 import ir_datasets as irds
 import pandas as pd
 
-def compute_all_bm25(index_path : str, 
+def compute_all_splade(index_path : str, 
                      model_name_or_path : str,
                      dataset : str, 
                      output_path : str,
                      threads : int = 1,
                      subsample : int = 100000,
-                     cutoff : int = 1000):
+                     cutoff : int = 1000,
+                     verbose : bool = False):
    
     os.makedirs(output_path, exist_ok=True)
 
     index = PisaIndex.from_dataset(index_path, threads=threads)
     splade = SpladeFactory(model_name_or_path)
-    model = splade.query_encoder(scale=100.) >> index.quantized(num_results=cutoff) % cutoff  
+    model = splade.query_encoder(scale=100.) >> index.quantized(num_results=cutoff, verbose=verbose) % cutoff  
 
     ds = irds.load(dataset)
-    docpairs = pd.DataFrame(ds.docpairs_iter()).drop_duplicates('query_id').sample(subsample)
+    docpairs = pd.DataFrame(ds.docpairs_iter()).sample(subsample)[['query_id', 'doc_id_a']]
     queries = pd.DataFrame(ds.queries_iter()).set_index('query_id').text.to_dict()
 
-    docpairs['query'] = docpairs['query_id'].apply(lambda x: queries[x])
+    all_possible = docpairs.drop_duplicates('query_id').copy()
+    all_possible['query'] = all_possible['query_id'].apply(lambda x: queries[x])
 
-    topics = docpairs[['query_id', 'query']].rename(columns={'query_id': 'qid'})
+    topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
     results = model.transform(topics)
 
     results = results.groupby('qid').agg({'docno': list}).reset_index()
-    results.to_json(os.path.join(output_path, f'splade.{cutoff}.{subsample}.json'), orient='records')
+    results.to_json(os.path.join(output_path, f'splade.{cutoff}.{subsample}.negatives.json'), orient='records')
+    docpairs.to_json(os.path.join(output_path, f'splade.{cutoff}.{subsample}.docpairs.json'), orient='records')
 
 if __name__ == '__main__':
-    Fire(compute_all_bm25)
+    Fire(compute_all_splade)
 
 
     

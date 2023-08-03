@@ -11,18 +11,19 @@ def compute_all_bm25(index_path : str,
                      output_path : str,
                      threads : int = 1,
                      subsample : int = 100000,
-                     cutoff : int = 1000):
+                     cutoff : int = 1000,
+                     verbose : bool = False):
    
     os.makedirs(output_path, exist_ok=True)
 
     index = PisaIndex.from_dataset(index_path, threads=threads)
-    model = index.bm25(num_results=cutoff) 
+    model = index.bm25(num_results=cutoff, verbose=verbose) 
 
     ds = irds.load(dataset)
     docpairs = pd.DataFrame(ds.docpairs_iter()).sample(subsample)[['query_id', 'doc_id_a']]
     queries = pd.DataFrame(ds.queries_iter()).set_index('query_id').text.to_dict()
 
-    all_possible = docpairs.drop_duplicates('query_id')
+    all_possible = docpairs.drop_duplicates('query_id').copy()
     all_possible['query'] = all_possible['query_id'].apply(lambda x: queries[x])
 
     topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
