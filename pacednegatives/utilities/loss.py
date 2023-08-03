@@ -1,14 +1,20 @@
-import torch.nn.functional as F
 import torch
 
-def LCEcrossentropy(plogits, nlogits, op, on, weights):
-    pce = F.cross_entropy(plogits.view(-1, plogits.size(-1)), op.view(-1), reduction='none')
-    nce = F.cross_entropy(nlogits.view(-1, nlogits.size(-1)), on.view(-1), reduction='none')
+def init_LCEcrossentropy(ignore_index=-100):
+    loss_fn = torch.nn.CrossEntropyLoss(ignore_index=ignore_index, reduction='none')
+    def LCEcrossentropy(plogits, nlogits, op, on, weights=None, backward=True):
+        pce = loss_fn(plogits.view(-1, plogits.size(-1)), op.view(-1), reduction='none')
+        nce = loss_fn(nlogits.view(-1, nlogits.size(-1)), on.view(-1), reduction='none')
 
-    nce = nce.view(-1, nlogits.size(-2))
-    nce = torch.sum(nce, dim=1)
-    # nce must become 2 dimensional
-    ce = pce + nce
-    v = weights.no_grad(ce, weights.eta)
-    loss = torch.mean(ce * v)
-    return loss
+        nce = nce.view(-1, nlogits.size(-2))
+        nce = torch.sum(nce, dim=1)
+        # nce must become 2 dimensional
+        ce = pce + nce
+        if weights is not None:
+            if backward:
+                v = weights.forward(ce)
+            else:
+                v = weights.no_grad(ce, weights.eta)
+            loss = torch.mean(ce * v)
+        return loss
+    return LCEcrossentropy

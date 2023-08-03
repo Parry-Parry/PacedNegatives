@@ -8,6 +8,7 @@ from torch.autograd import Variable, grad
 from transformers import get_linear_schedule_with_warmup
 from pacednegatives.pairwrapper import PacedWrapper
 from pacednegatives.weights import EtaWeights
+from pacednegatives.utilities.loss import LCEcrossentropy
 
 class LCEWrapper(PacedWrapper):
     def __init__(self, 
@@ -34,6 +35,8 @@ class LCEWrapper(PacedWrapper):
 
         self.REL = self.tokenizer.encode('true')[0]
         self.NREL = self.tokenizer.encode('false')[0]
+
+        self.loss_fn = LCEcrossentropy(ignore_index=ignore_index)
 
         self.meta_lr = meta_lr
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
@@ -68,32 +71,17 @@ class LCEWrapper(PacedWrapper):
 
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
-        '''
-        with torch.no_grad():
-            plogits = self.meta_model(input_ids=px, labels=o_p).logits
-            nlogits = self.meta_model(input_ids=nx, labels=o_n).logits
-        '''
         with torch.no_grad():
             plogits = self.model(input_ids=px, labels=op).logits
             nlogits = self.model(input_ids=nx, labels=on).logits
 
-        loss = self.loss(plogits, nlogits, op, on, self.weights)
-        '''
-        pce = self.loss_fn(plogits.view(-1, plogits.size(-1)), op.view(-1))
-        nce = self.loss_fn(nlogits.view(-1, nlogits.size(-1)), on.view(-1))
-      
-        ce = torch.div(pce+nce, 2)
-        v = self.weights.forward(loss=ce)
-        weighted_ce = torch.mean(pce * v) + torch.mean(nce * v) - torch.sum(v)
-        '''
+        loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
+       
         loss.backward()
         self.meta_optimizer.step()
         self.meta_optimizer.zero_grad()
 
         self.weights.clamp()
-        #grads = grad(weighted_ce, (self.weights.eta, ), create_graph=True, retain_graph=True)
-        #self.weights.eta = self.weights.clamp(self.weights.eta - self.meta_scheduler.get_last_lr()[0] * grads[0])
-        #del grads
 
         self.meta_scheduler.step()
 
@@ -104,19 +92,12 @@ class LCEWrapper(PacedWrapper):
         px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
 
         plogits = self.model(input_ids=px, labels=o_p).logits
-        pce = self.loss_fn(plogits.view(-1, plogits.size(-1)), o_p.view(-1))
-
-        nlogits = self.model(input_ids=nx, labels=o_n).logits
-        nce = self.loss_fn(nlogits.view(-1, nlogits.size(-1)), o_n.view(-1))
+        nlogits = self.model(input_ids=nx, labels=o_n).logits # Resolve dimensionality issues
         
         self.check_probs(plogits, nlogits)
 
-        ce = torch.div(pce+nce, 2)
-        #v = self.weights.no_grad(ce, self.weights.eta)
-        #loss = torch.mean(pce * v) + torch.mean(nce * v)
-        loss = torch.mean(pce) + torch.mean(nce)
-
-        self.check_success_rate(ce)
+        loss = self.loss_fn(plogits, nlogits, o_p, o_n)
+        self.check_success_rate(loss)
         
         loss.backward()
         self.optimizer.step()
@@ -161,13 +142,7 @@ class LCEWrapper(PacedWrapper):
                 self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
-                '''
-                if i % self.rate_check == 0:
-                    success_rate = np.mean(self.running_rate)
-                    if success_rate > self.threshold:
-                        self.difficulty = min(1., (self.difficulty + (1 / train_loader.dataset.n_neg)))
-                    self.running_rate = []
-                '''
+              
                 self.difficulty = self.weights.eta.item()
                 pbar.set_postfix({'loss': np.mean(self.logs['loss']['main'])})
                 pbar.update(self.train_loader.batch_size)
