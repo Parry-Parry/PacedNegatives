@@ -19,7 +19,7 @@ def compute_all_bm25(index_path : str,
 
     index = PisaIndex.from_dataset(index_path, threads=threads)
     splade = SpladeFactory(model_name_or_path)
-    model = splade.query_encoder(scale=100.) >> index.quantized() % cutoff  
+    model = splade.query_encoder(scale=100.) >> index.quantized(num_results=cutoff) % cutoff  
 
     ds = irds.load(dataset)
     docpairs = pd.DataFrame(ds.docpairs_iter()).drop_duplicates('query_id').sample(subsample)

@@ -16,19 +16,21 @@ def compute_all_bm25(index_path : str,
     os.makedirs(output_path, exist_ok=True)
 
     index = PisaIndex.from_dataset(index_path, threads=threads)
-    model = index.bm25() % cutoff
+    model = index.bm25(num_results=cutoff) 
 
     ds = irds.load(dataset)
-    docpairs = pd.DataFrame(ds.docpairs_iter()).drop_duplicates('query_id').sample(subsample)
+    docpairs = pd.DataFrame(ds.docpairs_iter()).sample(subsample)[['query_id', 'doc_id_a']]
     queries = pd.DataFrame(ds.queries_iter()).set_index('query_id').text.to_dict()
 
-    docpairs['query'] = docpairs['query_id'].apply(lambda x: queries[x])
+    all_possible = docpairs.drop_duplicates('query_id')
+    all_possible['query'] = all_possible['query_id'].apply(lambda x: queries[x])
 
-    topics = docpairs[['query_id', 'query']].rename(columns={'query_id': 'qid'})
+    topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
     results = model.transform(topics)
 
     results = results.groupby('qid').agg({'docno': list}).reset_index()
-    results.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
+    results.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.negatives.json'), orient='records')
+    docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.docpairs.json'), orient='records')
 
 if __name__ == '__main__':
     Fire(compute_all_bm25)
