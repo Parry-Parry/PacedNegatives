@@ -1,5 +1,7 @@
 from functools import partial
 from typing import Any
+
+import numpy as np
 from torch.autograd import Variable
 import torch
 import pandas as pd
@@ -75,7 +77,7 @@ class LevelLoader:
         return px, nx, o_p, o_n
 
 class LCEDataset:
-    def __init__(self, pairs, neg_idx, corpus, max=False):
+    def __init__(self, pairs, neg_idx, corpus,max=False):
         self.neg_idx = neg_idx
         self.n_neg = len(neg_idx[0]) - 1
         self.docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
@@ -109,7 +111,9 @@ class LCELoader:
     def get_batch(self, idx, weight=None):
         px, nx = [], []
         for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
-            q, p, n = self.dataset[(j, self.sample(weight))]
+            samples = self.sample(weight)
+            _idx = np.unique([self.round(x * self.n_neg) for x in samples])
+            q, p, n = self.dataset[(j, _idx)]
             px.append(self.format(q, p))
             nx.extend(map(partial(self.format, q), n))
 

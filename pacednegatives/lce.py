@@ -7,7 +7,7 @@ from torch.autograd import Variable, grad
 
 from transformers import get_linear_schedule_with_warmup
 from pacednegatives.pairwrapper import PacedWrapper
-from pacednegatives.weights import EtaWeights
+from pacednegatives.weights import LCEWeights
 from pacednegatives.utilities.loss import LCEcrossentropy
 
 class LCEWrapper(PacedWrapper):
@@ -23,7 +23,7 @@ class LCEWrapper(PacedWrapper):
                  ignore_index) -> None:
         super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
-        self.weights = EtaWeights(eta, device=self.device, min=0.+1e-10, max=1.)
+        self.weights = LCEWeights(eta, device=self.device, min=0.+1e-10, max=1.)
         self.logs['eta'] = []
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []

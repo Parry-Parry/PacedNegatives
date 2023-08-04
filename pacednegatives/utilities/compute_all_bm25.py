@@ -35,7 +35,3 @@ def compute_all_bm25(index_path : str,
 
 if __name__ == '__main__':
     Fire(compute_all_bm25)
-
-
-    
-
