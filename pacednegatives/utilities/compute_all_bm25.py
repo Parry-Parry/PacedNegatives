@@ -5,6 +5,7 @@ from fire import Fire
 from pyterrier_pisa import PisaIndex 
 import ir_datasets as irds
 import pandas as pd
+import re
 
 def compute_all_bm25(index_path : str, 
                      dataset : str, 
@@ -15,6 +16,7 @@ def compute_all_bm25(index_path : str,
                      verbose : bool = False):
    
     os.makedirs(output_path, exist_ok=True)
+    clean = lambda x : re.sub(r"[^a-zA-Z0-9¿]+", " ", x)
 
     #index = PisaIndex.from_dataset(index_path, threads=threads)
     #model = index.bm25(num_results=cutoff, verbose=verbose) 
@@ -26,7 +28,7 @@ def compute_all_bm25(index_path : str,
     queries = pd.DataFrame(ds.queries_iter()).set_index('query_id').text.to_dict()
 
     all_possible = docpairs.drop_duplicates('query_id').copy()
-    all_possible['query'] = all_possible['query_id'].apply(lambda x: queries[x])
+    all_possible['query'] = all_possible['query_id'].apply(lambda x: clean(queries[x]))
 
     topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
 
