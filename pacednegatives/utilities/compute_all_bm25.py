@@ -40,6 +40,8 @@ def compute_all_bm25(index_path : str,
     print(f'got {len(results)} results')
     print(results.head())
 
+    print(len(results['qid'].unique()))
+
     results = results[['qid', 'docno']].groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
     results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
     negative_dict = results.set_index('qid')['doc_id_b'].to_dict()
