@@ -6,6 +6,8 @@ def main(pair_file : str, negative_file : str, output_file : str, cutoff : int =
     pairs = pd.read_json(pair_file, orient='records', dtype={'query_id': str, 'doc_id_a': str})
     negatives = pd.read_json(negative_file, orient='records', dtype={'query_id': str, 'doc_id_b': list})
 
+    print(negatives.head())
+
     if cutoff is not None:
         pairs = pairs.sample(cutoff)
     
