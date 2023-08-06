@@ -36,7 +36,7 @@ def compute_all_bm25(index_path : str,
     results = model.transform(topics)
 
     results = results[['qid', 'docno']].groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
-    results = results[len(results['docno'] >= cutoff)]
+    results = results[len(results['doc_id_b'] >= cutoff)]
     subresults = results.sample(subsample)
     subresults['doc_id_b'] = subresults['doc_id_b'].apply(lambda x: x[::-1])
     subresults['doc_id_a'] = subresults['qid'].apply(lambda x: positive_lookup[x])
