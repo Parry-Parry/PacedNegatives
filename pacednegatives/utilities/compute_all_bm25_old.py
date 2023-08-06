@@ -45,11 +45,6 @@ def compute_all_bm25(index_path : str,
     results = results[['qid', 'docno']].groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
     results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
     negative_dict = results.set_index('qid')['doc_id_b'].to_dict()
-
-    # print docpair dtypes
-    print(docpairs.dtypes, len(docpairs))
-    # print negative dict dtypes
-    print(results.dtypes, len(results))
     
     
     docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_dict[int(x)])
