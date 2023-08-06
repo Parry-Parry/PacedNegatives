@@ -36,7 +36,8 @@ def compute_all_bm25(index_path : str,
         results = model.transform(batch)
         counts = results['qid'].value_counts()
         counts = counts[counts >= cutoff]
-        results = results[results['qid'].isin(counts['qid'])]
+        candidates = counts.index.tolist()
+        results = results[results['qid'].isin(candidates)]
 
         results = results.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
         results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff])
