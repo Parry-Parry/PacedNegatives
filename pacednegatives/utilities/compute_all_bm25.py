@@ -29,14 +29,11 @@ def compute_all_bm25(index_path : str,
     topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
     results = model.transform(topics)
 
-    print(len(results))
-
     results = results.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
-    positive_dict = docpairs.set_index('query_id')['doc_id_a'].to_dict()
-
-    # join results with docpairs putting list of docnos as doc_id_b in docpairs
     results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff][::-1])
-    results['doc_id_a'] = results['qid'].apply(lambda x: positive_dict[x])
+    negative_dict = results.set_index('qid')['doc_id_b'].to_dict()
+    
+    docpairs['doc_id_a'] = docpairs['query_id'].apply(lambda x: negative_dict[x])
 
     results.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
 
