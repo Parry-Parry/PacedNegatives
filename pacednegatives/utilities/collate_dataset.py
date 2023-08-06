@@ -13,3 +13,6 @@ def main(pair_file : str, negative_file : str, output_file : str, cutoff : int =
 
     pairs['doc_id_b'] = pairs['query_id'].apply(lambda x: negative_dict[x])
     pairs.to_json(output_file, orient='records')
+
+if __name__ == '__main__':
+    Fire(main)
