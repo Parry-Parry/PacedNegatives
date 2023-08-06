@@ -43,7 +43,7 @@ def compute_all_bm25(index_path : str,
         results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff])
         results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
 
-        tmp.append(results)
+        tmp.append(results[['qid', 'doc_id_b']].copy())
 
     results = pd.concat(tmp)
     results.to_json(os.path.join(output_path, f'bm25.{cutoff}.results.json'), orient='records')
