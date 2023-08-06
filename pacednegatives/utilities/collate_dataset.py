@@ -6,12 +6,10 @@ def main(pair_file : str, negative_file : str, output_file : str, cutoff : int =
     pairs = pd.read_json(pair_file, orient='records', dtype={'query_id': str, 'doc_id_a': str})
     negatives = pd.read_json(negative_file, orient='records', dtype={'qid': str, 'docno': list})
 
-    print(negatives.head())
-
     if cutoff is not None:
         pairs = pairs.sample(cutoff)
     
-    negative_dict = negatives.set_index('qid').docno.to_dict()
+    negative_dict = negatives.set_index('qid').docno.astype(str).to_dict()
 
     pairs['doc_id_b'] = pairs['query_id'].apply(lambda x: negative_dict[str(x)])
     pairs.to_json(output_file, orient='records')
