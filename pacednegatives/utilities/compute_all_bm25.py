@@ -42,7 +42,7 @@ def compute_all_bm25(index_path : str,
         # .agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
 
         BATCH_SIZE = 10000
-        qid_groups = list(results[['qid', 'docno']].groupby('qid'))
+        qid_groups = [d for _, d in results[['qid', 'docno']].groupby('qid')]
 
         tmp = []
 
