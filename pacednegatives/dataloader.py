@@ -132,7 +132,8 @@ class LCELoader:
         px, nx = [], []
         for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
             _idx = self.sample(weight)
-            q, p, n = self.dataset.get((j, _idx))
+            qp, n = self.dataset.get((j, _idx))
+            q, p = qp
             px.append(self.format(q, p))
             nx.extend(map(partial(self.format, q), n))
 
