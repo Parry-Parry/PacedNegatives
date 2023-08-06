@@ -8,7 +8,7 @@ from torch.autograd import Variable, grad
 from transformers import get_linear_schedule_with_warmup
 from pacednegatives.pairwrapper import PacedWrapper
 from pacednegatives.weights import LCEWeights
-from pacednegatives.utilities.loss import LCEcrossentropy
+from pacednegatives.utilities.loss import init_LCEcrossentropy
 from pacednegatives.util import batch
 
 class LCEWrapper(PacedWrapper):
@@ -34,7 +34,7 @@ class LCEWrapper(PacedWrapper):
         self.REL = self.tokenizer.encode('true')[0]
         self.NREL = self.tokenizer.encode('false')[0]
 
-        self.loss_fn = LCEcrossentropy(ignore_index=ignore_index)
+        self.loss_fn = init_LCEcrossentropy(ignore_index=ignore_index)
 
         self.meta_lr = meta_lr
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
