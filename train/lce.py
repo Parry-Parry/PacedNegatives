@@ -23,6 +23,7 @@ def main(
         max=True,
         warmup_steps=0,
         sample=False,
+        use_mean=True,
         wandb_project=None,):
 
     os.makedirs(out_dir, exist_ok=True)
@@ -71,6 +72,7 @@ def main(
                          lr, 
                          lr,
                          ignore_index=-100, 
+                         use_mean=use_mean,
                          )
     
     logs = trainer.train(loader, total_steps, warmup_steps=warmup_steps)
