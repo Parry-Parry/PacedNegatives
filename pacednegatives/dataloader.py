@@ -90,7 +90,7 @@ class LCEDataset:
     def __len__(self):
         return len(self.data)
     
-    def __getitem__(self, idx):
+    def get(self, idx):
         return self.data[idx[0]], [self.docs[x] for x in self.neg_idx[0][idx[1]].to_list()]
     
 class LCELoader:
@@ -103,7 +103,7 @@ class LCELoader:
     
     def sample(self, mean):
         n = self.dataset.n_neg - 1
-        idx = np.arange(self.dataset.n_neg)
+        idx = np.arange(self.dataset.n_neg, dtype=np.int32)
 
         probabilities = binom.pmf(idx, n, mean)
         adjusted_probabilities = probabilities / probabilities.sum()
@@ -132,7 +132,7 @@ class LCELoader:
         px, nx = [], []
         for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
             _idx = self.sample(weight)
-            q, p, n = self.dataset[(j, _idx)]
+            q, p, n = self.dataset.get((j, _idx))
             px.append(self.format(q, p))
             nx.extend(map(partial(self.format, q), n))
 
