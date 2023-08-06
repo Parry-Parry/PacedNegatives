@@ -18,16 +18,17 @@ def compute_all_bm25(index_path : str,
     os.makedirs(output_path, exist_ok=True)
     clean = lambda x : re.sub(r"[^a-zA-Z0-9¿]+", " ", x)
 
-    #index = PisaIndex.from_dataset(index_path, threads=threads)
-    #model = index.bm25(num_results=cutoff, verbose=verbose) 
+    index = PisaIndex.from_dataset(index_path, threads=threads)
+    model = index.bm25(num_results=cutoff, verbose=verbose) 
 
-    model = pt.BatchRetrieve.from_dataset(index_path, 'terrier_stemmed', wmodel="BM25", verbose=verbose)
+    #model = pt.BatchRetrieve.from_dataset(index_path, 'terrier_stemmed', wmodel="BM25", verbose=verbose)
 
     ds = irds.load(dataset)
     docpairs = pd.DataFrame(ds.docpairs_iter()).sample(subsample)[['query_id', 'doc_id_a']]
     queries = pd.DataFrame(ds.queries_iter()).set_index('query_id').text.to_dict()
 
-    all_possible = docpairs.drop_duplicates('query_id').copy()
+    #all_possible = docpairs.drop_duplicates('query_id').copy()
+    all_possible = docpairs.copy()
     all_possible['query'] = all_possible['query_id'].apply(lambda x: clean(queries[x]))
 
     topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
@@ -35,6 +36,9 @@ def compute_all_bm25(index_path : str,
     print(f'searching over {len(topics)} topics')
 
     results = model.transform(topics)
+
+    print(f'got {len(results)} results')
+    print(results.head())
 
     results = results[['qid', 'docno']].groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
     results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
