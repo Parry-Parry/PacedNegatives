@@ -99,7 +99,7 @@ class LCEWrapper(PacedWrapper):
 
         for _batch in batch_iter(nx, n=self.batch_size):
             nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch)).logits)
-        nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits.size(-1)) # Resolve dimensionality issues
+        nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on)
         
