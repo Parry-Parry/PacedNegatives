@@ -9,7 +9,11 @@ from transformers import get_linear_schedule_with_warmup
 from pacednegatives.pairwrapper import PacedWrapper
 from pacednegatives.weights import LCEWeights
 from pacednegatives.utilities.loss import init_LCEcrossentropy
-from pacednegatives.util import batch
+
+def batch_iter(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
 
 class LCEWrapper(PacedWrapper):
     def __init__(self, 
@@ -66,7 +70,7 @@ class LCEWrapper(PacedWrapper):
         with torch.no_grad():
             plogits = self.model(input_ids=px, labels=op).logits
             nlogits = []
-            for _batch in batch(list(zip(nx, on)), n=self.batch_size):
+            for _batch in batch_iter(list(zip(nx, on)), n=self.batch_size):
                 _nx, _on = _batch
                 nlogits.append(self.model(input_ids=_nx, labels=_on).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.dataset.n_neg, nlogits.size(-1)) # Resolve dimensionality issues
@@ -89,7 +93,7 @@ class LCEWrapper(PacedWrapper):
    
         plogits = self.model(input_ids=px, labels=op).logits
         nlogits = []
-        for _batch in batch(list(zip(nx, on)), n=self.batch_size):
+        for _batch in batch_iter(list(zip(nx, on)), n=self.batch_size):
             _nx, _on = _batch
             nlogits.append(self.model(input_ids=_nx, labels=_on).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.dataset.n_neg, nlogits.size(-1)) # Resolve dimensionality issues

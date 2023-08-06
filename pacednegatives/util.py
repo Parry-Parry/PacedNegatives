@@ -43,8 +43,3 @@ def take_balanced_subset(triples, num_docs=10):
     triples = triples.copy()
     triples['doc_id_b'] = triples['doc_id_b'].apply(lambda x : get_balanced_idx(x, num_docs))
     return triples
-
-def batch(iterable, n=1):
-    l = len(iterable)
-    for ndx in range(0, l, n):
-        yield iterable[ndx:min(ndx + n, l)]
