@@ -34,7 +34,7 @@ def compute_all_bm25(index_path : str,
     positive_dict = docpairs.set_index('query_id')['doc_id_a'].to_dict()
 
     # join results with docpairs putting list of docnos as doc_id_b in docpairs
-    results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff])
+    results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff][::-1])
     results['doc_id_a'] = results['qid'].apply(lambda x: positive_dict[x])
 
     results.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
