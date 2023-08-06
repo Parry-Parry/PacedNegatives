@@ -32,9 +32,14 @@ def compute_all_splade(index_path : str,
     topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
     results = model.transform(topics)
 
-    results = results.groupby('qid').agg({'docno': list}).reset_index()
-    results.to_json(os.path.join(output_path, f'splade.{cutoff}.{subsample}.negatives.json'), orient='records')
-    docpairs.to_json(os.path.join(output_path, f'splade.{cutoff}.{subsample}.docpairs.json'), orient='records')
+    results = results.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
+    positive_dict = docpairs.set_index('query_id')['doc_id_a'].to_dict()
+
+    # join results with docpairs putting list of docnos as doc_id_b in docpairs
+    results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff][::-1])
+    results['doc_id_a'] = results['qid'].apply(lambda x: positive_dict[x])
+
+    results.to_json(os.path.join(output_path, f'splade.{cutoff}.{subsample}.json'), orient='records')
 
 if __name__ == '__main__':
     Fire(compute_all_splade)
