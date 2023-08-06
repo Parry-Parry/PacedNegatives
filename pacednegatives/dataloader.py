@@ -5,6 +5,7 @@ import numpy as np
 from torch.autograd import Variable
 import torch
 import pandas as pd
+from scipy.stats import binom
 from math import floor, ceil
 
 gen_var = lambda x, y : Variable(x, requires_grad=y)
@@ -79,7 +80,7 @@ class LevelLoader:
 class LCEDataset:
     def __init__(self, pairs, neg_idx, corpus,max=False):
         self.neg_idx = neg_idx
-        self.n_neg = len(neg_idx[0]) - 1
+        self.n_neg = len(neg_idx[0]) 
         self.docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
         self.queries = pd.DataFrame(corpus.queries_iter()).set_index('query_id').text.to_dict()
         self.round = ceil if max else floor
@@ -98,9 +99,28 @@ class LCELoader:
         self.batch_size = batch_size
         self.var = var
         self.n = n
+        self.round = torch.floor
     
     def sample(self, mean):
-        return torch.unique(torch.clamp(torch.normal(mean, self.var, size=(self.n,)), 0.0, 1.0), dim=0).to_numpy()
+        n = self.dataset.n_neg - 1
+        idx = np.arange(self.dataset.n_neg)
+
+        probabilities = binom.pmf(idx, n, mean)
+        adjusted_probabilities = probabilities / probabilities.sum()
+        adjusted_variance = np.var(adjusted_probabilities)
+        scaling_factor = np.sqrt(self.var / adjusted_variance)
+        adjusted_probabilities *= scaling_factor
+        adjusted_probabilities /= adjusted_probabilities.sum()
+
+        return np.random.choice(idx, size=(self.n,), replace=False, p=adjusted_probabilities)
+
+    def torch_sample(self, mean):
+        sample2idx = lambda x : self.round(torch.clamp(x, 0.0, 1.0) * self.n_neg)
+        initial = torch.unique(sample2idx(torch.normal(mean, self.var, size=(self.n,))), dim=0)
+        while len(initial) < self.n:
+            new = torch.unique(sample2idx(torch.normal(mean, self.var, size=(self.n - len(initial),))), dim=0)
+            initial = torch.unique(torch.cat((initial, new), dim=0))
+        return initial.to_numpy()
 
     def __len__(self):
         return len(self.dataset)
@@ -111,8 +131,7 @@ class LCELoader:
     def get_batch(self, idx, weight=None):
         px, nx = [], []
         for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
-            samples = self.sample(weight)
-            _idx = np.unique([self.round(x * self.n_neg) for x in samples])
+            _idx = self.sample(weight)
             q, p, n = self.dataset[(j, _idx)]
             px.append(self.format(q, p))
             nx.extend(map(partial(self.format, q), n))

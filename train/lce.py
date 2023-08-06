@@ -14,6 +14,7 @@ def main(
         dataset_name : str, 
         out_dir : str, 
         total_steps : int = 100000, 
+        eta : float = 0.0,
         batch_size : int = 16, 
         lr : float = 0.001, 
         var : float = 0.01,
@@ -30,6 +31,7 @@ def main(
                 'variant': data.split('/')[-1],
                 'dataset': dataset_name,
                 'total_steps': total_steps,
+                'eta': eta,
                 'batch_size': batch_size,
                 'lr': lr,
                 'max': max,
@@ -39,12 +41,12 @@ def main(
     ## INIT DATA ##
 
     with open(data, 'r') as f:
-        dataset = pd.read_json(f, orient='records', lines=True, dtype={'query_id': str, 'doc_id_a': str, 'doc_id_b': list})
+        dataset = pd.read_json(f, orient='records', lines=True, dtype={'qid': str, 'doc_id_a': str, 'doc_id_b': list})
     corpus = irds.load(dataset_name)
 
     if sample: dataset = dataset.sample(frac=1).reset_index(drop=True)
 
-    pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
+    pairs = dataset[['qid', 'doc_id_a']].values.tolist()
     neg_idx = dataset['doc_id_b'].values
 
     dataset = LCEDataset(pairs, neg_idx, corpus, max)
@@ -57,14 +59,15 @@ def main(
 
     ## TRAIN ##
 
-    trainer = LCEWrapper(dataset_name, 
-                           'monoT5', 
-                           batch_size, 
-                           init, 
-                           tokenizer, 
-                           lr, 
-                           ignore_index=-100, 
-                           max=max,)
+    trainer = LCEWrapper(eta
+                         dataset_name, 
+                         'monoT5', 
+                         batch_size, 
+                         init, 
+                         tokenizer, 
+                         lr, 
+                         ignore_index=-100, 
+                         max=max,)
     
     logs = trainer.train(loader, total_steps, warmup_steps=warmup_steps)
 

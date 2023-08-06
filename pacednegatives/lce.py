@@ -9,6 +9,7 @@ from transformers import get_linear_schedule_with_warmup
 from pacednegatives.pairwrapper import PacedWrapper
 from pacednegatives.weights import LCEWeights
 from pacednegatives.utilities.loss import LCEcrossentropy
+from pacednegatives.util import batch
 
 class LCEWrapper(PacedWrapper):
     def __init__(self, 
@@ -23,15 +24,12 @@ class LCEWrapper(PacedWrapper):
                  ignore_index) -> None:
         super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
-        self.weights = LCEWeights(eta, device=self.device, min=0.+1e-10, max=1.)
+        self.weights = LCEWeights(eta, device=self.device, min=0.+1e-10, max=1.0-1e-10)
         self.logs['eta'] = []
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []
         self.logs['lr'] = {'main': [], 'meta' : []}
-        self.logs['success_rate'] = []
         self.logs['probs'] = []
-
-        self.running_rate = []
 
         self.REL = self.tokenizer.encode('true')[0]
         self.NREL = self.tokenizer.encode('false')[0]
@@ -40,12 +38,6 @@ class LCEWrapper(PacedWrapper):
 
         self.meta_lr = meta_lr
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
-
-    def check_probs(self, pos, neg):
-        pos_probs = pos[:, 0, (self.REL, self.NREL)].softmax(dim=-1)[:, 0]
-        neg_probs = neg[:, 0, (self.REL, self.NREL)].softmax(dim=-1)[:, 0]
-
-        self.logs['probs'].append(torch.mean((pos_probs > neg_probs).float()).item())
 
     def check_success_rate(self, loss):
         self.running_rate.append(torch.mean((loss < self.weights.eta.item()).float()).item())
@@ -57,7 +49,7 @@ class LCEWrapper(PacedWrapper):
         o_p = self.tokenizer(['true'] * len(px), padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
 
         nx = self.tokenizer(nx, padding=True, return_tensors='pt').input_ids.to(self.device)
-        o_n = self.tokenizer(o_n, padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
+        o_n = self.tokenizer(['false'] * len(nx), padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
 
         px = Variable(px, requires_grad=False)
         nx = Variable(nx, requires_grad=False)
@@ -73,7 +65,11 @@ class LCEWrapper(PacedWrapper):
  
         with torch.no_grad():
             plogits = self.model(input_ids=px, labels=op).logits
-            nlogits = self.model(input_ids=nx, labels=on).logits
+            nlogits = []
+            for _batch in batch(list(zip(nx, on)), n=self.batch_size):
+                _nx, _on = _batch
+                nlogits.append(self.model(input_ids=_nx, labels=_on).logits)
+            nlogits = torch.cat(nlogits, dim=0).view(-1, self.dataset.n_neg, nlogits.size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
        
@@ -89,14 +85,16 @@ class LCEWrapper(PacedWrapper):
         return loss.item()
 
     def main_loop(self, j):
-        px, nx, o_p, o_n = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
+        px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
+   
+        plogits = self.model(input_ids=px, labels=op).logits
+        nlogits = []
+        for _batch in batch(list(zip(nx, on)), n=self.batch_size):
+            _nx, _on = _batch
+            nlogits.append(self.model(input_ids=_nx, labels=_on).logits)
+        nlogits = torch.cat(nlogits, dim=0).view(-1, self.dataset.n_neg, nlogits.size(-1)) # Resolve dimensionality issues
 
-        plogits = self.model(input_ids=px, labels=o_p).logits
-        nlogits = self.model(input_ids=nx, labels=o_n).logits # Resolve dimensionality issues
-        
-        self.check_probs(plogits, nlogits)
-
-        loss = self.loss_fn(plogits, nlogits, o_p, o_n)
+        loss = self.loss_fn(plogits, nlogits, op, on)
         self.check_success_rate(loss)
         
         loss.backward()
@@ -111,7 +109,7 @@ class LCEWrapper(PacedWrapper):
         _logger = ir_datasets.log.easy()
         self.train_loader = train_loader   
         self.total_steps = total_steps
-        self.difficulty = 0.0
+        self.difficulty = self.weights.eta.item()
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
@@ -133,7 +131,6 @@ class LCEWrapper(PacedWrapper):
                                'lr': self.scheduler.get_last_lr()[0], 
                                'meta_lr' : self.meta_scheduler.get_last_lr()[0], 
                                'difficulty': self.difficulty, 
-                               'success_rate' : self.running_rate[-1], 
                                'eta' : self.weights.eta.item(),
                                'probs' : self.logs['probs'][-1]})
 

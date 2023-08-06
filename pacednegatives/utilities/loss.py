@@ -7,7 +7,7 @@ def init_LCEcrossentropy(ignore_index=-100):
         nce = loss_fn(nlogits.view(-1, nlogits.size(-1)), on.view(-1), reduction='none')
 
         nce = nce.view(-1, nlogits.size(-2))
-        nce = torch.sum(nce, dim=1)
+        nce = torch.mean(nce, dim=1)
         # nce must become 2 dimensional
         ce = pce + nce
         if weights is not None:

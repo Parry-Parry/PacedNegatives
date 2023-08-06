@@ -1,0 +1,19 @@
+from fire import Fire
+import subprocess as sp
+from os.path import join
+import numpy as np
+
+def main(script, data, dataset, out_dir, batch_size=16, lr=0.001, wandb_project=None, sample=False):
+    variance = [0.01, 0.02, 0.03, 0.04, 0.05]
+    N = [2, 4, 8, 16]
+    start = -np.log(0.5)*0.5
+
+    for var in variance:
+        for n in N:
+            out = join(out_dir, f'paced_{var}_{n}')
+            args = f'python {script} --data {data} --dataset_name {dataset} --out_dir {out} --batch_size {batch_size} --lr {lr} --wandb_project {wandb_project} --eta {start} --var {var} --n {n}'
+            if sample: args += ' --sample'
+            sp.run(args, shell=True)
+
+if __name__ == '__main__':
+    Fire(main)
