@@ -31,9 +31,13 @@ def compute_all_bm25(index_path : str,
 
     results = results.groupby('qid').agg({'docno': list}).rename(columns={'qid' : 'query_id', 'docno': 'doc_id_b'}).reset_index()
 
+    positive_dict = docpairs.set_index('query_id')['doc_id_a'].to_dict()
+
     # join results with docpairs putting list of docnos as doc_id_b in docpairs
-    docpairs = docpairs.merge(results, on='query_id', how='left')
-    docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
+    results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff])
+    results['doc_id_a'] = results['query_id'].apply(lambda x: positive_dict[x])
+
+    results.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
 
 
     #docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.docpairs.json'), orient='records')
