@@ -18,14 +18,13 @@ def compute_all_bm25(index_path : str,
    
     os.makedirs(output_path, exist_ok=True)
     clean = lambda x : re.sub(r"[^a-zA-Z0-9¿]+", " ", x)
+    ds = irds.load(dataset)
     docpairs = pd.DataFrame(ds.docpairs_iter())
 
     if not negative_lookup:
 
         index = PisaIndex.from_dataset(index_path, threads=threads)
         model = index.bm25(num_results=cutoff, verbose=verbose) 
-
-        ds = irds.load(dataset)
         
         queries = pd.DataFrame(ds.queries_iter())
 
