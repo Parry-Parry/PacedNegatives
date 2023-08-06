@@ -40,13 +40,13 @@ def compute_all_bm25(index_path : str,
         print('Completed BM25')
 
         # .agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
-
+        results = results[['qid', 'docno']]
         BATCH_SIZE = 10000
-        qid_groups = [d for _, d in results[['qid', 'docno']].groupby('qid')]
+        qid_groups = batch_iter(results.groupby('qid'), BATCH_SIZE)
 
         tmp = []
 
-        for batch in batch_iter(qid_groups, BATCH_SIZE):
+        for batch in qid_groups:
             print(f'Processing batch of {len(batch)}')
             batch = pd.DataFrame(batch, columns=['qid', 'docno'])
             batch = batch.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
