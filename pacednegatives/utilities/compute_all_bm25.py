@@ -29,9 +29,14 @@ def compute_all_bm25(index_path : str,
     topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
     results = model.transform(topics)
 
-    results = results.groupby('qid').agg({'docno': list}).reset_index()
-    results.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.negatives.json'), orient='records')
-    docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.docpairs.json'), orient='records')
+    results = results.groupby('qid').agg({'docno': list}).rename(columns={'qid' : 'query_id', 'docno': 'doc_id_b'}).reset_index()
+
+    # join results with docpairs putting list of docnos as doc_id_b in docpairs
+    docpairs = docpairs.merge(results, on='query_id', how='left')
+    docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
+
+
+    #docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.docpairs.json'), orient='records')
 
 if __name__ == '__main__':
     Fire(compute_all_bm25)
