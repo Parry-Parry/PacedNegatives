@@ -16,8 +16,10 @@ def compute_all_bm25(index_path : str,
    
     os.makedirs(output_path, exist_ok=True)
 
-    index = PisaIndex.from_dataset(index_path, threads=threads)
-    model = index.bm25(num_results=cutoff, verbose=verbose) 
+    #index = PisaIndex.from_dataset(index_path, threads=threads)
+    #model = index.bm25(num_results=cutoff, verbose=verbose) 
+
+    model = pt.BatchRetrieve.from_dataset(index_path, 'terrier_stemmed', wmodel="BM25")
 
     ds = irds.load(dataset)
     docpairs = pd.DataFrame(ds.docpairs_iter()).sample(subsample)[['query_id', 'doc_id_a']]
@@ -40,7 +42,6 @@ def compute_all_bm25(index_path : str,
     print(docpairs.dtypes, len(docpairs))
     # print negative dict dtypes
     print(results.dtypes, len(results))
-
     
     
     docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_dict[x])
