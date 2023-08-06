@@ -37,11 +37,13 @@ def compute_all_bm25(index_path : str,
     negative_dict = results.set_index('qid')['doc_id_b'].to_dict()
 
     # print docpair dtypes
-    print(docpairs.dtypes)
+    print(docpairs.dtypes, len(docpairs))
     # print negative dict dtypes
-    print(results.dtypes)
+    print(results.dtypes, len(results))
+
     
-    docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_dict[str(x)])
+    
+    docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_dict[x])
     docpairs = docpairs.rename(columns={'query_id': 'qid'})
     docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
 
