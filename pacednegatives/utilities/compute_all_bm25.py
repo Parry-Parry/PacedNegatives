@@ -32,6 +32,11 @@ def compute_all_bm25(index_path : str,
     topics['query'] = topics['query'].apply(lambda x: clean(x))
     results = model.transform(topics)
 
+    counts = results['qid'].value_counts()
+    counts = counts[counts >= cutoff]
+
+    results = results[results['qid'].isin(counts['qid'])]
+
     results.to_json(os.path.join(output_path, f'bm25.{cutoff}.results.json'), orient='records')
 
     print('Completed BM25')
