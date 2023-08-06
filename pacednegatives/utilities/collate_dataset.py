@@ -8,8 +8,10 @@ def main(pair_file : str, negative_file : str, output_file : str, cutoff : int =
 
     if cutoff is not None:
         pairs = pairs.sample(cutoff)
+
+    print(pairs.head())
     
-    negative_dict = negatives.set_index('qid').docno.astype(str).to_dict()
+    negative_dict = negatives.set_index('qid')['docno'].astype(str).to_dict()
 
     pairs['doc_id_b'] = pairs['query_id'].apply(lambda x: negative_dict[str(x)])
     pairs.to_json(output_file, orient='records')
