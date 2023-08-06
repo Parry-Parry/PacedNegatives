@@ -21,7 +21,7 @@ def compute_all_bm25(index_path : str,
     #index = PisaIndex.from_dataset(index_path, threads=threads)
     #model = index.bm25(num_results=cutoff, verbose=verbose) 
 
-    model = pt.BatchRetrieve.from_dataset(index_path, 'terrier_stemmed', wmodel="BM25")
+    model = pt.BatchRetrieve.from_dataset(index_path, 'terrier_stemmed', wmodel="BM25", verbose=verbose)
 
     ds = irds.load(dataset)
     docpairs = pd.DataFrame(ds.docpairs_iter()).sample(subsample)[['query_id', 'doc_id_a']]
