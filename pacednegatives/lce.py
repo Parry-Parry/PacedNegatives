@@ -46,22 +46,25 @@ class LCEWrapper(PacedWrapper):
     def check_success_rate(self, loss):
         self.running_rate.append(torch.mean((loss < self.weights.eta.item()).float()).item())
 
+    def create_y(self, x, token='false'):
+        y = self.tokenizer([token] * len(x), padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
+        return Variable(y, requires_grad=False)
+
     def prep_batch(self, batch):
         px, nx = batch
 
         px = self.tokenizer(px, padding=True, return_tensors='pt').input_ids.to(self.device)
-        o_p = self.tokenizer(['true'] * len(px), padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
 
         nx = self.tokenizer(nx, padding=True, return_tensors='pt').input_ids.to(self.device)
-        o_n = self.tokenizer(['false'] * len(nx), padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
 
         px = Variable(px, requires_grad=False)
         nx = Variable(nx, requires_grad=False)
-        o_p = Variable(o_p, requires_grad=False)
-        o_n = Variable(o_n, requires_grad=False)
 
-        return px, nx, o_p, o_n
-        
+        op = self.create_y(px, token='true')
+        on = self.create_y(nx, token='false')
+
+        return px, nx, op, on
+
 
     def meta_loop(self, j):
 
@@ -71,10 +74,8 @@ class LCEWrapper(PacedWrapper):
             plogits = self.model(input_ids=px, labels=op).logits
             nlogits = []
 
-            for _batch in batch_iter(list(zip(nx, on)), n=self.batch_size):
-                print(_batch)
-                _nx, _on = _batch
-                nlogits.append(self.model(input_ids=_nx, labels=_on).logits)
+            for _batch in batch_iter(nx, n=self.batch_size):
+                nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch)).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.dataset.n_neg, nlogits.size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
@@ -95,13 +96,12 @@ class LCEWrapper(PacedWrapper):
    
         plogits = self.model(input_ids=px, labels=op).logits
         nlogits = []
-        for _batch in batch_iter(list(zip(nx, on)), n=self.batch_size):
-            _nx, _on = _batch
-            nlogits.append(self.model(input_ids=_nx, labels=_on).logits)
+
+        for _batch in batch_iter(nx, n=self.batch_size):
+            nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch)).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.dataset.n_neg, nlogits.size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on)
-        self.check_success_rate(loss)
         
         loss.backward()
         self.optimizer.step()
