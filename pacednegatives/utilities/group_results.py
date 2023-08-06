@@ -24,38 +24,6 @@ def compute_all(model : str,
     ds = irds.load(dataset)
     docpairs = pd.DataFrame(ds.docpairs_iter())
     results = pd.read_json(results_path, orient='records')
-    results = results[['qid', 'docno']]
-
-    # count the number of docnos for each qid without groupby
-    results['count'] = results['qid'].map(results['qid'].value_counts())
-
-    results = results[results['count'] >= cutoff]
-
-    print('Filtered')
-
-    results = results.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
-    results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
-
-    '''
-
-    BATCH_SIZE = 10000
-    qid_groups = batch_iter(results.groupby('qid'), BATCH_SIZE)
-
-    tmp = []
-
-    for batch in qid_groups:
-        print(f'Processing batch of {len(batch)}')
-        batch = pd.DataFrame(batch, columns=['qid', 'docno'])
-        batch = batch.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
-        batch['length'] = batch['doc_id_b'].apply(lambda x: len(x))
-        batch = batch[batch['length'] >= cutoff]
-        batch['doc_id_b'] = batch['doc_id_b'].apply(lambda x: x[::-1])
-        tmp.append(batch[['qid', 'doc_id_b']])
-    
-    results = pd.concat(tmp)
-    '''
-    print('Aggregated')
-
     negative_lookup = results.set_index('qid')['doc_id_b'].to_dict()
     del results
 
