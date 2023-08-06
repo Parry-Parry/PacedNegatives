@@ -32,8 +32,13 @@ def compute_all_bm25(index_path : str,
         topics['query'] = topics['query'].apply(lambda x: clean(x))
         results = model.transform(topics)
 
+        print('Completed BM25')
+
         results = results[['qid', 'docno']].groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
-        results = results[results['doc_id_b'].apply(len) >= cutoff]
+
+        print('Aggregated')
+        results['length'] = results['doc_id_b'].apply(lambda x: len(x))
+        results = results[results['length'] >= cutoff].copy()
         results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
         print(f'{len(results)} valid topics found')
         results.to_json(os.path.join(output_path, f'bm25.{cutoff}.negatives.json'), orient='records')
