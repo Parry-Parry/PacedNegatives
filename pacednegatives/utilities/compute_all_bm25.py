@@ -33,9 +33,9 @@ def compute_all_bm25(index_path : str,
     results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff][::-1])
     negative_dict = results.set_index('qid')['doc_id_b'].to_dict()
     
-    docpairs['doc_id_a'] = docpairs['query_id'].apply(lambda x: negative_dict[x])
-
-    results.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
+    docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_dict[x])
+    docpairs = docpairs.rename(columns={'query_id': 'qid'})
+    docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
 
 if __name__ == '__main__':
     Fire(compute_all_bm25)
