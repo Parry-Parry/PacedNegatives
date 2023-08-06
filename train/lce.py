@@ -8,6 +8,7 @@ import ir_datasets as irds
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 import logging
 import wandb
+import numpy as np
 
 def main(
         data : str, 
@@ -41,13 +42,13 @@ def main(
     ## INIT DATA ##
 
     with open(data, 'r') as f:
-        dataset = pd.read_json(f, orient='records', lines=True, dtype={'qid': str, 'doc_id_a': str, 'doc_id_b': list})
+        dataset = pd.read_json(f, orient='records', dtype={'qid': str, 'doc_id_a': str, 'doc_id_b': list})
     corpus = irds.load(dataset_name)
 
     if sample: dataset = dataset.sample(frac=1).reset_index(drop=True)
 
     pairs = dataset[['qid', 'doc_id_a']].values.tolist()
-    neg_idx = dataset['doc_id_b'].values
+    neg_idx = np.array(dataset['doc_id_b'].values)
 
     dataset = LCEDataset(pairs, neg_idx, corpus, max)
     loader = LCELoader(dataset, batch_size, var, n)
