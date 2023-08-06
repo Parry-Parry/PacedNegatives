@@ -70,7 +70,9 @@ class LCEWrapper(PacedWrapper):
         with torch.no_grad():
             plogits = self.model(input_ids=px, labels=op).logits
             nlogits = []
+
             for _batch in batch_iter(list(zip(nx, on)), n=self.batch_size):
+                print(_batch)
                 _nx, _on = _batch
                 nlogits.append(self.model(input_ids=_nx, labels=_on).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.dataset.n_neg, nlogits.size(-1)) # Resolve dimensionality issues
