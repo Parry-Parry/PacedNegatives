@@ -29,6 +29,8 @@ def compute_all_bm25(index_path : str,
     topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
     results = model.transform(topics)
 
+    print(len(results))
+
     results = results.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
     positive_dict = docpairs.set_index('query_id')['doc_id_a'].to_dict()
 
