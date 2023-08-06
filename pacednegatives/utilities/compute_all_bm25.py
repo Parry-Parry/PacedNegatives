@@ -7,6 +7,11 @@ import ir_datasets as irds
 import pandas as pd
 import re
 
+def batch_iter(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+
 def compute_all_bm25(index_path : str, 
                      dataset : str, 
                      output_path : str,
@@ -34,18 +39,33 @@ def compute_all_bm25(index_path : str,
 
         print('Completed BM25')
 
-        results = results[['qid', 'docno']].groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
+        # .agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
+
+        BATCH_SIZE = 10000
+        qid_groups = list(results[['qid', 'docno']].groupby('qid'))
+
+        tmp = []
+
+        for batch in batch_iter(qid_groups, BATCH_SIZE):
+            print(f'Processing batch of {len(batch)}')
+            batch = pd.DataFrame(batch, columns=['qid', 'docno'])
+            batch = batch.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
+            batch['length'] = batch['doc_id_b'].apply(lambda x: len(x))
+            batch = batch[batch['length'] >= cutoff]
+            batch['doc_id_b'] = batch['doc_id_b'].apply(lambda x: x[::-1])
+            tmp.append(batch[['qid', 'doc_id_b']])
+        
+        results = pd.concat(tmp)
 
         print('Aggregated')
-        results['length'] = results['doc_id_b'].apply(lambda x: len(x))
-        results = results[results['length'] >= cutoff].copy()
-        results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
+        
         print(f'{len(results)} valid topics found')
         results.to_json(os.path.join(output_path, f'bm25.{cutoff}.negatives.json'), orient='records')
     else:
         results = pd.read_json(negative_lookup, orient='records')
 
     negative_lookup = results.set_index('qid')['doc_id_b'].to_dict()
+    del results
 
     all_topic_ids = docpairs['query_id'].unique().tolist()
     all_negative_ids = results['qid'].unique().tolist()
