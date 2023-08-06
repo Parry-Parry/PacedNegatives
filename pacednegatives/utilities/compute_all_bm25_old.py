@@ -24,24 +24,37 @@ def compute_all_bm25(index_path : str,
     #model = pt.BatchRetrieve.from_dataset(index_path, 'terrier_stemmed', wmodel="BM25", verbose=verbose)
 
     ds = irds.load(dataset)
-    docpairs = pd.DataFrame(ds.docpairs_iter()).drop_duplicates(['query_id'])
-    positive_lookup = docpairs.set_index('query_id')['doc_id_a'].to_dict()
-    queries = pd.DataFrame(ds.queries_iter())
+    docpairs = pd.DataFrame(ds.docpairs_iter()).sample(subsample)[['query_id', 'doc_id_a']]
+    queries = pd.DataFrame(ds.queries_iter()).set_index('query_id').text.to_dict()
 
-    topics = queries.rename(columns={'query_id': 'qid', 'text' : 'query'})
-    topics['query'] = topics['query'].apply(lambda x: clean(x))
+    #all_possible = docpairs.drop_duplicates('query_id').copy()
+    all_possible = docpairs.copy()
+    all_possible['query'] = all_possible['query_id'].apply(lambda x: clean(queries[x]))
+
+    topics = all_possible[['query_id', 'query']].rename(columns={'query_id': 'qid'})
 
     print(f'searching over {len(topics)} topics')
 
     results = model.transform(topics)
 
+    print(f'got {len(results)} results')
+    print(results.head())
+
+    print(len(results['qid'].unique()))
+
     results = results[['qid', 'docno']].groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
-    results = results[len(results['docno'] >= cutoff)]
-    subresults = results.sample(subsample)
-    subresults['doc_id_b'] = subresults['doc_id_b'].apply(lambda x: x[::-1])
-    subresults['doc_id_a'] = subresults['qid'].apply(lambda x: positive_lookup[x])
+    results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
+    negative_dict = results.set_index('qid')['doc_id_b'].to_dict()
+
+    # print docpair dtypes
+    print(docpairs.dtypes, len(docpairs))
+    # print negative dict dtypes
+    print(results.dtypes, len(results))
     
-    subresults.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
+    
+    docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_dict[int(x)])
+    docpairs = docpairs.rename(columns={'query_id': 'qid'})
+    docpairs.to_json(os.path.join(output_path, f'bm25.{cutoff}.{subsample}.json'), orient='records')
 
 if __name__ == '__main__':
     Fire(compute_all_bm25)
