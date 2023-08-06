@@ -48,7 +48,9 @@ def main(
     if sample: dataset = dataset.sample(frac=1).reset_index(drop=True)
 
     pairs = dataset[['qid', 'doc_id_a']].values.tolist()
-    neg_idx = np.array(dataset['doc_id_b'].values)
+    neg_idx = dataset['doc_id_b'].values
+
+    print(neg_idx.shape)
 
     dataset = LCEDataset(pairs, neg_idx, corpus, max)
     loader = LCELoader(dataset, batch_size, var, n)

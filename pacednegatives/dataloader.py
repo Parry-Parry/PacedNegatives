@@ -91,7 +91,7 @@ class LCEDataset:
         return len(self.data)
     
     def __getitem__(self, idx):
-        return self.data[idx[0]], [self.docs[x] for x in self.neg_idx[idx].to_list()]
+        return self.data[idx[0]], [self.docs[x] for x in self.neg_idx[0][idx[1]].to_list()]
     
 class LCELoader:
     def __init__(self, dataset : Any, batch_size : int, var : float, n : int) -> None:
