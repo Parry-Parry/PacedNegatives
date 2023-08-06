@@ -67,8 +67,9 @@ def main(
                          init, 
                          tokenizer, 
                          lr, 
+                         lr,
                          ignore_index=-100, 
-                         max=max,)
+                         )
     
     logs = trainer.train(loader, total_steps, warmup_steps=warmup_steps)
 
