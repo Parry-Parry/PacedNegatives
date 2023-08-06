@@ -10,7 +10,7 @@ import re
 def batch_iter(iterable, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
-        yield iterable[ndx:min(ndx + n, l)]
+        yield iterable.iloc[ndx:min(ndx + n, l)]
 
 def compute_all_bm25(index_path : str, 
                      dataset : str, 
@@ -30,13 +30,21 @@ def compute_all_bm25(index_path : str,
 
     topics = queries.rename(columns={'query_id': 'qid', 'text' : 'query'})
     topics['query'] = topics['query'].apply(lambda x: clean(x))
-    results = model.transform(topics)
 
-    counts = results['qid'].value_counts()
-    counts = counts[counts >= cutoff]
+    tmp = []
+    for batch in batch_iter(topics['query'], 1000):
+        results = model.transform(batch)
+        counts = results['qid'].value_counts()
+        counts = counts[counts >= cutoff]
+        results = results[results['qid'].isin(counts['qid'])]
 
-    results = results[results['qid'].isin(counts['qid'])]
+        results = results.groupby('qid').agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
+        results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[:cutoff])
+        results['doc_id_b'] = results['doc_id_b'].apply(lambda x: x[::-1])
 
+        tmp.append(results)
+
+    results = pd.concat(tmp)
     results.to_json(os.path.join(output_path, f'bm25.{cutoff}.results.json'), orient='records')
 
     print('Completed BM25')
