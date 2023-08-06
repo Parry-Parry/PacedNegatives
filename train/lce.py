@@ -60,7 +60,7 @@ def main(
 
     ## TRAIN ##
 
-    trainer = LCEWrapper(eta
+    trainer = LCEWrapper(eta,
                          dataset_name, 
                          'monoT5', 
                          batch_size, 
