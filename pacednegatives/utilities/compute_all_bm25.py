@@ -32,7 +32,7 @@ def compute_all_bm25(index_path : str,
     topics['query'] = topics['query'].apply(lambda x: clean(x))
 
     tmp = []
-    for batch in batch_iter(topics['query'], 1000):
+    for batch in batch_iter(topics, 1000):
         results = model.transform(batch)
         counts = results['qid'].value_counts()
         counts = counts[counts >= cutoff]
