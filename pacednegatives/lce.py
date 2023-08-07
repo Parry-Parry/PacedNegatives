@@ -68,11 +68,11 @@ class LCEWrapper(PacedWrapper):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
         with torch.no_grad():
-            plogits = self.model(input_ids=px, labels=op).logits
+            plogits = self.model(input_ids=px, return_dict=True).logits
             nlogits = []
 
-            for _batch in batch_iter(nx, n=self.batch_size):
-                nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch)).logits)
+            for _batch in batch_iter(nx, n=int(self.batch_size//2)):
+                nlogits.append(self.model(input_ids=_batch, return_dict=True).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
@@ -91,11 +91,11 @@ class LCEWrapper(PacedWrapper):
     def main_loop(self, j):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
    
-        plogits = self.model(input_ids=px, labels=op).logits
+        plogits = self.model(input_ids=px, return_dict=True).logits
         nlogits = []
 
-        for _batch in batch_iter(nx, n=self.batch_size):
-            nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch)).logits)
+        for _batch in batch_iter(nx, n=int(self.batch_size//2)):
+            nlogits.append(self.model(input_ids=_batch, return_dict=True).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on)
@@ -113,6 +113,7 @@ class LCEWrapper(PacedWrapper):
         self.train_loader = train_loader   
         self.total_steps = total_steps
         self.difficulty = self.weights.eta.item()
+        self.y_neg = self.create_y(torch.ones(int(self.batch_size//2),))
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
