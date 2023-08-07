@@ -134,7 +134,7 @@ class LCEWrapper():
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
         self.model, self.optimizer, self.train_loader, self.scheduler = self.accelerator.prepare(self.model, self.optimizer, train_loader, self.scheduler, device_placement=[True, True, False, False])
-        
+        self.train_loader.dataset.weight = self.difficulty
         start = time.time()
         
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
