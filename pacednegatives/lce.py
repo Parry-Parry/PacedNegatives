@@ -122,7 +122,7 @@ class LCEWrapper(PacedWrapper):
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
             for i in range(total_steps//self.train_loader.batch_size):
 
-                meta_loss = self.meta_loop(i) if self.difficulty < 1. else 0.
+                meta_loss = self.meta_loop(i) if self.weights.eta.item() < 1. else 0.
                 loss = self.main_loop(i)
 
                 if wandb.run is not None:
