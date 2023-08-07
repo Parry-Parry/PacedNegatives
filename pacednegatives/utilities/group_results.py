@@ -33,7 +33,7 @@ def compute_all(model : str,
 
     docpairs = docpairs[docpairs['query_id'].isin(all_negative_ids)].copy()
     docpairs = docpairs.sample(subsample)[['query_id', 'doc_id_a']]
-    docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_lookup[x])
+    docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_lookup[int(x)])
     
     docpairs.to_json(os.path.join(output_path, f'{model}.{cutoff}.{subsample}.json'), orient='records')
 
