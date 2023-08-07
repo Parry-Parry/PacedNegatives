@@ -70,7 +70,6 @@ class LCEWrapper():
 
     def prep_batch(self, batch):
         px, nx = batch
-        print(px)
 
         px = self.tokenizer(px, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
 
@@ -85,8 +84,8 @@ class LCEWrapper():
         return px, nx, op, on
 
 
-    def meta_loop(self, px, nx):
-        px, nx, op, on = self.prep_batch((px, nx))
+    def meta_loop(self, i):
+        px, nx, op, on = self.prep_batch(self.train_loader[i])
  
         with torch.no_grad():
             plogits = self.model(input_ids=px, labels=op).logits
@@ -104,8 +103,8 @@ class LCEWrapper():
 
         return loss.item()
 
-    def main_loop(self, px, nx):
-        px, nx, op, on = self.prep_batch((px, nx))
+    def main_loop(self, i):
+        px, nx, op, on = self.prep_batch(self.train_loader[i])
    
         plogits = self.model(input_ids=px.to(self.device), labels=op).logits
         nlogits = []
@@ -139,11 +138,11 @@ class LCEWrapper():
         start = time.time()
         
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
-            for px, nx in self.train_loader:
+            for i in range(total_steps // self.train_loader.batch_size):
                 self.train_loader.dataset.weight = self.difficulty
-                meta_loss = self.meta_loop(px, nx) if self.weights.eta.item() < 1. else 0.
+                meta_loss = self.meta_loop(i) if self.weights.eta.item() < 1. else 0.
                 self.train_loader.dataset.weight = self.difficulty
-                loss = self.main_loop(px, nx)
+                loss = self.main_loop(i)
 
                 if wandb.run is not None:
                     wandb.log({'loss': loss, 
