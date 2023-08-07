@@ -138,7 +138,7 @@ class LCEWrapper():
         start = time.time()
         
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
-            for i in range(total_steps // self.train_loader.batch_size):
+            for i in range(total_steps // self.batch_size):
                 self.train_loader.dataset.weight = self.difficulty
                 meta_loss = self.meta_loop(i) if self.weights.eta.item() < 1. else 0.
                 self.train_loader.dataset.weight = self.difficulty
