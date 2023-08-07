@@ -22,7 +22,7 @@ def compute_all(model : str,
     ds = irds.load(dataset)
     docpairs = pd.DataFrame(ds.docpairs_iter())
     results = pd.read_json(results_path, orient='records')
-    negative_lookup = results.set_index('qid')['doc_id_b'].to_dict()
+    negative_lookup = results.set_index('qid')['doc_id_b'].astype(str).to_dict()
     all_negative_ids = results['qid'].unique().tolist()
     del results
 
