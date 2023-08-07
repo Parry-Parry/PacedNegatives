@@ -56,7 +56,7 @@ class LCEWeights(nn.Module):
         self.weighting = lambda x, y : (x/y)
     
     def clamp(self):
-        self.eta = self.clamp_func(self.eta.data)
+        self.eta = nn.Parameter(self.clamp_func(self.eta.data), requires_grad=True)
     
     def set_mask(self, mask : float):
         self.mask = torch.tensor([mask], requires_grad=False).to(self.device)
