@@ -112,8 +112,12 @@ class LCELoader:
         scaling_factor = np.sqrt(self.var / adjusted_variance)
         adjusted_probabilities *= scaling_factor
         adjusted_probabilities /= adjusted_probabilities.sum()
-
-        return np.random.choice(idx, size=(self.n,), replace=False, p=adjusted_probabilities)
+        try:
+            samples =  np.random.choice(idx, size=(self.n,), replace=False, p=adjusted_probabilities)
+            return samples
+        except ValueError:
+            print(f'Failed to sample with mean {mean} and var {self.var}')
+            exit()
 
     def torch_sample(self, mean):
         sample2idx = lambda x : self.round(torch.clamp(x, 0.0, 1.0) * self.n_neg)
