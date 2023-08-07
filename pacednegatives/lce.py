@@ -127,7 +127,7 @@ class LCEWrapper():
         self.total_steps = total_steps
         self.difficulty = self.weights.eta.item()
         self.train_loader = train_loader
-        self.y_neg = self.create_y(torch.ones(self.batch_size,))
+        self.y_neg = self.create_y(torch.ones(self.batch_size,), self.acc_device, token='false')
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
