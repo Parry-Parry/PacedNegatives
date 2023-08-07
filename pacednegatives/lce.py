@@ -44,15 +44,15 @@ class LCEWrapper(PacedWrapper):
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
 
     def create_y(self, x, token='false'):
-        y = self.tokenizer([token] * len(x), padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
+        y = self.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
         return Variable(y, requires_grad=False)
 
     def prep_batch(self, batch):
         px, nx = batch
 
-        px = self.tokenizer(px, padding=True, return_tensors='pt').input_ids.to(self.device)
+        px = self.tokenizer(px, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids.to(self.device)
 
-        nx = self.tokenizer(nx, padding=True, return_tensors='pt').input_ids.to(self.device)
+        nx = self.tokenizer(nx, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids.to(self.device)
 
         px = Variable(px, requires_grad=False)
         nx = Variable(nx, requires_grad=False)
