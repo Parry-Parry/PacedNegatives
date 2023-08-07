@@ -129,13 +129,13 @@ class LCEWrapper(PacedWrapper):
                     wandb.log({'loss': loss, 
                                'meta_loss' : meta_loss, 
                                'lr': self.scheduler.get_last_lr()[0], 
-                               'meta_lr' : self.meta_scheduler.get_last_lr()[0], 
+                               #'meta_lr' : self.meta_scheduler.get_last_lr()[0], 
                                'difficulty': self.difficulty, 
                                'eta' : self.weights.eta.item()})
 
                 self.logs['loss']['main'].append(loss)
                 self.logs['lr']['main'].append(self.scheduler.get_last_lr()[0])
-                self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
+                #self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
               
