@@ -10,6 +10,7 @@ import logging
 import wandb
 import numpy as np
 from typing import List
+from torch.utils.data import DataLoader
 
 def main(
         data : str, 
@@ -56,6 +57,7 @@ def main(
 
     dataset = LCEDataset(pairs, neg_idx, corpus, max)
     loader = LCELoader(dataset, batch_size, var, n, min=0.+1e-10, max=1.0-1e-10)
+    train_loader = DataLoader(loader)
 
     ## INIT MODEL ##
 
@@ -76,9 +78,8 @@ def main(
                          use_mean=use_mean,
                          )
     
-    logs = trainer.train(loader, total_steps, warmup_steps=warmup_steps)
-
-    trainer.model.save_pretrained(os.path.join(out_dir, 'model'))
+    logs = trainer.train(train_loader, total_steps, warmup_steps=warmup_steps)
+    trainer.accelerator.save_model(trainer.model, os.path.join(out_dir, 'model'))
 
     with open(os.path.join(out_dir, 'logs.json'), 'w') as f:
         json.dump(logs, f)
