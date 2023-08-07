@@ -68,19 +68,19 @@ class LCEWrapper(PacedWrapper):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
         with torch.no_grad():
-            plogits = self.model(input_ids=px.to(self.device), labels=op).logits.cpu()
+            plogits = self.model(input_ids=px.to(self.device), labels=op).logits
             nlogits = []
             for _batch in batch_iter(nx, n=int(self.batch_size)):
-                nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits.cpu())
+                nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
-        loss = self.loss_fn(plogits, nlogits, op.cpu(), on.cpu(), self.weights)
+        loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
        
         loss.backward()
         self.meta_optimizer.step()
         self.meta_optimizer.zero_grad()
 
-        self.meta_scheduler.step()
+        #self.meta_scheduler.step()
 
         self.logs['loss']['meta'].append(loss.item())
         return loss.item()
@@ -88,13 +88,13 @@ class LCEWrapper(PacedWrapper):
     def main_loop(self, j):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
    
-        plogits = self.model(input_ids=px.to(self.device), labels=op).logits.cpu()
+        plogits = self.model(input_ids=px.to(self.device), labels=op).logits
         nlogits = []
         for _batch in batch_iter(nx, n=int(self.batch_size)):
-            nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits.cpu())
+            nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
-        loss = self.loss_fn(plogits, nlogits, op.cpu(), on.cpu())
+        loss = self.loss_fn(plogits, nlogits, op, on)
         
         loss.backward()
         self.optimizer.step()
@@ -113,9 +113,9 @@ class LCEWrapper(PacedWrapper):
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
-        self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
-                                                         num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
-                                                         num_training_steps=total_steps)
+        #self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
+                                                        # num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
+                                                         #num_training_steps=total_steps)
         
         start = time.time()
         
