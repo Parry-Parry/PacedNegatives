@@ -139,7 +139,7 @@ class LCEWrapper(PacedWrapper):
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
               
-                self.difficulty = self.weights.eta.item()
+                self.difficulty = min(self.train_loader.max, self.weights.eta.item())
                 pbar.set_postfix({'loss': np.mean(self.logs['loss']['main'])})
                 pbar.update(self.train_loader.batch_size)
 
