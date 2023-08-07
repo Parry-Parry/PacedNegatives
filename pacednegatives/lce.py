@@ -47,8 +47,9 @@ class LCEWrapper():
         self.optimizer = AdamW(self.model.parameters(), lr=lr)
 
         self.accelerator = Accelerator()
+        self.acc_device = self.accelerator.device
 
-        self.weights = LCEWeights(eta, device=self.device)
+        self.weights = LCEWeights(eta, device=self.acc_device)
         self.logs['eta'] = []
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []
@@ -63,12 +64,11 @@ class LCEWrapper():
         self.batch_size = batch_size
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
 
-    def create_y(self, x, token='false', cpu=False):
-        y = self.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
-        if not cpu: y = y.to(self.device)
+    def create_y(self, x, device, token='false'):
+        y = self.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(device)
         return Variable(y, requires_grad=False)
 
-    def prep_batch(self, batch):
+    def prep_batch(self, batch, device):
         px, nx = batch
 
         px = self.tokenizer(px, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
@@ -78,20 +78,20 @@ class LCEWrapper():
         px = Variable(px, requires_grad=False)
         nx = Variable(nx, requires_grad=False)
 
-        op = self.create_y(px, token='true')
-        on = self.create_y(nx, token='false')
+        op = self.create_y(px, device, token='true')
+        on = self.create_y(nx, device, token='false')
 
         return px, nx, op, on
 
 
     def meta_loop(self, i):
-        px, nx, op, on = self.prep_batch(self.train_loader[i])
+        px, nx, op, on = self.prep_batch(self.train_loader.get_batch(i, self.difficulty), self.acc_device)
  
         with torch.no_grad():
             plogits = self.model(input_ids=px, labels=op).logits
             nlogits = []
             for _batch in batch_iter(nx, n=int(self.batch_size)):
-                nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits)
+                nlogits.append(self.model(input_ids=_batch.to(self.acc_device), labels=self.y_neg).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
@@ -104,12 +104,12 @@ class LCEWrapper():
         return loss.item()
 
     def main_loop(self, i):
-        px, nx, op, on = self.prep_batch(self.train_loader[i])
+        px, nx, op, on = self.prep_batch(self.train_loader.get_batch(i, self.difficulty), self.acc_device)
    
-        plogits = self.model(input_ids=px.to(self.device), labels=op).logits
+        plogits = self.model(input_ids=px.to(self.acc_device), labels=op).logits
         nlogits = []
         for _batch in batch_iter(nx, n=int(self.batch_size)):
-            nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits)
+            nlogits.append(self.model(input_ids=_batch.to(self.acc_device), labels=self.y_neg).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on)
@@ -126,6 +126,7 @@ class LCEWrapper():
         _logger = ir_datasets.log.easy()  
         self.total_steps = total_steps
         self.difficulty = self.weights.eta.item()
+        self.train_loader = train_loader
         self.y_neg = self.create_y(torch.ones(self.batch_size,))
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
@@ -133,15 +134,14 @@ class LCEWrapper():
         self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
-        self.model, self.optimizer, self.train_loader, self.scheduler = self.accelerator.prepare(self.model, self.optimizer, train_loader, self.scheduler, device_placement=[True, True, False, False])
-        self.train_loader.dataset.weight = self.difficulty
+        self.model, self.optimizer, self.scheduler = self.accelerator.prepare(self.model, self.optimizer, self.scheduler, device_placement=[True, True, False])
+        
         start = time.time()
         
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
             for i in range(total_steps // self.batch_size):
-                self.train_loader.dataset.weight = self.difficulty
+       
                 meta_loss = self.meta_loop(i) if self.weights.eta.item() < 1. else 0.
-                self.train_loader.dataset.weight = self.difficulty
                 loss = self.main_loop(i)
 
                 if wandb.run is not None:
@@ -159,7 +159,7 @@ class LCEWrapper():
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
               
-                self.difficulty = min(self.train_loader.dataset.max, self.weights.eta.item())
+                self.difficulty = min(self.train_loader.max, self.weights.eta.item())
                 pbar.set_postfix({'loss': np.mean(self.logs['loss']['main'])})
                 pbar.update(self.train_loader.batch_size)
 
