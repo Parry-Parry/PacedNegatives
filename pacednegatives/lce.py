@@ -70,6 +70,7 @@ class LCEWrapper():
 
     def prep_batch(self, batch):
         px, nx = batch
+        print(px)
 
         px = self.tokenizer(px, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
 
