@@ -141,6 +141,9 @@ class LCEWrapper(PacedWrapper):
                 self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
+
+                if i % 100 == 0:
+                    print('eta: %s', self.weights.eta.item())
               
                 self.difficulty = self.weights.eta.item()
                 pbar.set_postfix({'loss': np.mean(self.logs['loss']['main'])})
