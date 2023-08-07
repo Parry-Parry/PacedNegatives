@@ -64,6 +64,7 @@ class LCEWrapper(PacedWrapper):
 
 
     def meta_loop(self, j):
+        self.weights.clamp()
 
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
