@@ -29,7 +29,7 @@ class LCEWrapper(PacedWrapper):
                  use_mean : bool = None) -> None:
         super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
-        self.weights = LCEWeights(eta, device=torch.device('cpu'), min=0.+1e-10, max=1.0-1e-10)
+        self.weights = LCEWeights(eta, device=self.device, min=0.+1e-10, max=1.0-1e-10)
         self.logs['eta'] = []
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []
