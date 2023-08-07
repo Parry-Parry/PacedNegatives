@@ -2,10 +2,8 @@ import pyterrier as pt
 if not pt.started(): pt.init()
 import os
 from fire import Fire 
-from pyterrier_pisa import PisaIndex 
 import ir_datasets as irds
 import pandas as pd
-import re
 
 def batch_iter(iterable, n=1):
     l = len(iterable)
@@ -25,10 +23,11 @@ def compute_all(model : str,
     docpairs = pd.DataFrame(ds.docpairs_iter())
     results = pd.read_json(results_path, orient='records')
     negative_lookup = results.set_index('qid')['doc_id_b'].to_dict()
+    all_negative_ids = results['qid'].unique().tolist()
     del results
 
     all_topic_ids = docpairs['query_id'].unique().tolist()
-    all_negative_ids = results['qid'].unique().tolist()
+    
 
     candidates = list(set(all_topic_ids).intersection(set(all_negative_ids)))
 
