@@ -26,6 +26,11 @@ def compute_all(model : str,
     all_negative_ids = results['qid'].unique().tolist()
     del results
 
+    print(f'loaded results with {len(all_negative_ids)} qids')
+
+    print(all_negative_ids[:10])
+    print(docpairs['query_id'].unique().tolist()[:10])
+
     docpairs = docpairs[docpairs['query_id'].isin(all_negative_ids)].copy()
     docpairs = docpairs.sample(subsample)[['query_id', 'doc_id_a']]
     docpairs['doc_id_b'] = docpairs['query_id'].apply(lambda x: negative_lookup[x])
