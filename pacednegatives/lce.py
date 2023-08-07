@@ -43,8 +43,9 @@ class LCEWrapper(PacedWrapper):
         self.meta_lr = meta_lr
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
 
-    def create_y(self, x, token='false'):
-        y = self.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
+    def create_y(self, x, token='false', cpu=False):
+        y = self.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+        if not cpu: y = y.to(self.device)
         return Variable(y, requires_grad=False)
 
     def prep_batch(self, batch):
@@ -58,7 +59,7 @@ class LCEWrapper(PacedWrapper):
         nx = Variable(nx, requires_grad=False)
 
         op = self.create_y(px, token='true')
-        on = self.create_y(nx, token='false')
+        on = self.create_y(nx, token='false', cpu=True)
 
         return px, nx, op, on
 
@@ -74,7 +75,7 @@ class LCEWrapper(PacedWrapper):
                 nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits.cpu())
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
-        loss = self.loss_fn(plogits, nlogits, op.cpu(), on.cpu(), self.weights)
+        loss = self.loss_fn(plogits, nlogits, op.cpu(), on, self.weights)
        
         loss.backward()
         self.meta_optimizer.step()
@@ -94,7 +95,7 @@ class LCEWrapper(PacedWrapper):
             nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits.cpu())
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
-        loss = self.loss_fn(plogits, nlogits, op.cpu(), on.cpu())
+        loss = self.loss_fn(plogits, nlogits, op.cpu(), on)
         
         loss.backward()
         self.optimizer.step()
