@@ -34,7 +34,6 @@ class LCEWrapper(PacedWrapper):
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []
         self.logs['lr'] = {'main': [], 'meta' : []}
-        self.logs['probs'] = []
 
         self.REL = self.tokenizer.encode('true')[0]
         self.NREL = self.tokenizer.encode('false')[0]
@@ -43,9 +42,6 @@ class LCEWrapper(PacedWrapper):
 
         self.meta_lr = meta_lr
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
-
-    def check_success_rate(self, loss):
-        self.running_rate.append(torch.mean((loss < self.weights.eta.item()).float()).item())
 
     def create_y(self, x, token='false'):
         y = self.tokenizer([token] * len(x), padding=True, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(self.device)
@@ -138,8 +134,7 @@ class LCEWrapper(PacedWrapper):
                                'lr': self.scheduler.get_last_lr()[0], 
                                'meta_lr' : self.meta_scheduler.get_last_lr()[0], 
                                'difficulty': self.difficulty, 
-                               'eta' : self.weights.eta.item(),
-                               'probs' : self.logs['probs'][-1]})
+                               'eta' : self.weights.eta.item()})
 
                 self.logs['loss']['main'].append(loss)
                 self.logs['lr']['main'].append(self.scheduler.get_last_lr()[0])
