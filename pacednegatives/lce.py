@@ -69,13 +69,13 @@ class LCEWrapper(PacedWrapper):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
         with torch.no_grad():
-            plogits = self.model(input_ids=px.to(self.device), labels=op).logits.cpu()
+            plogits = self.model(input_ids=px.to(self.device), labels=op).logits
             nlogits = []
             for _batch in batch_iter(nx, n=int(self.batch_size)):
                 nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits.cpu())
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
-        loss = self.loss_fn(plogits, nlogits, op.cpu(), on, self.weights)
+        loss = self.loss_fn(plogits, nlogits.cuda(), op, on.cuda(), self.weights)
        
         loss.backward()
         self.meta_optimizer.step()
