@@ -59,7 +59,7 @@ class LCEWrapper(PacedWrapper):
         nx = Variable(nx, requires_grad=False)
 
         op = self.create_y(px, token='true')
-        on = self.create_y(nx, token='false', cpu=True)
+        on = self.create_y(nx, token='false')
 
         return px, nx, op, on
 
@@ -72,10 +72,10 @@ class LCEWrapper(PacedWrapper):
             plogits = self.model(input_ids=px.to(self.device), labels=op).logits
             nlogits = []
             for _batch in batch_iter(nx, n=int(self.batch_size)):
-                nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits.cpu())
+                nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
-        loss = self.loss_fn(plogits, nlogits.cuda(), op, on.cuda(), self.weights)
+        loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
        
         loss.backward()
         self.meta_optimizer.step()
@@ -92,10 +92,10 @@ class LCEWrapper(PacedWrapper):
         plogits = self.model(input_ids=px.to(self.device), labels=op).logits
         nlogits = []
         for _batch in batch_iter(nx, n=int(self.batch_size)):
-            nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits.cpu())
+            nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
-        loss = self.loss_fn(plogits, nlogits.cuda(), op, on)
+        loss = self.loss_fn(plogits, nlogits, op, on)
         
         loss.backward()
         self.optimizer.step()

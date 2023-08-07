@@ -59,7 +59,7 @@ def main(
 
     ## INIT MODEL ##
 
-    init = lambda : T5ForConditionalGeneration.from_pretrained('t5-base')
+    init = lambda : T5ForConditionalGeneration.from_pretrained('t5-base', device_map='auto')
     tokenizer = T5Tokenizer.from_pretrained('t5-base')
 
     ## TRAIN ##
