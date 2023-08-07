@@ -68,11 +68,11 @@ class LCEWrapper(PacedWrapper):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
         with torch.no_grad():
-            plogits = self.model(input_ids=px, return_dict=True).logits
+            plogits = self.model(input_ids=px, labels=op).logits
             nlogits = []
 
             for _batch in batch_iter(nx, n=int(self.batch_size//2)):
-                nlogits.append(self.model(input_ids=_batch, return_dict=True).logits)
+                nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
@@ -91,11 +91,11 @@ class LCEWrapper(PacedWrapper):
     def main_loop(self, j):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
    
-        plogits = self.model(input_ids=px, return_dict=True).logits
+        plogits = self.model(input_ids=px, labels=op).logits
         nlogits = []
 
         for _batch in batch_iter(nx, n=int(self.batch_size//2)):
-            nlogits.append(self.model(input_ids=_batch, return_dict=True).logits)
+            nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on)
