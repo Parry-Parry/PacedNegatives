@@ -15,7 +15,7 @@ def init_LCEcrossentropy(ignore_index=-100, use_mean=True):
                 v = weights.forward(ce)
             else:
                 v = weights.no_grad(ce, weights.eta)
-            loss = torch.mean(ce * v)
+            loss = torch.mean(ce * v.cpu())
         else: loss = torch.mean(ce)
         return loss
     return LCEcrossentropy
