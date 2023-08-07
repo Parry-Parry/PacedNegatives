@@ -50,9 +50,9 @@ class LCEWrapper(PacedWrapper):
     def prep_batch(self, batch):
         px, nx = batch
 
-        px = self.tokenizer(px, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids.to(self.device)
+        px = self.tokenizer(px, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
 
-        nx = self.tokenizer(nx, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids.to(self.device)
+        nx = self.tokenizer(nx, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
 
         px = Variable(px, requires_grad=False)
         nx = Variable(nx, requires_grad=False)
@@ -68,11 +68,10 @@ class LCEWrapper(PacedWrapper):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
         with torch.no_grad():
-            plogits = self.model(input_ids=px, labels=op).logits
+            plogits = self.model(input_ids=px.to(self.device), labels=op).logits
             nlogits = []
-
             for _batch in batch_iter(nx, n=int(self.batch_size)):
-                nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
+                nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
@@ -91,11 +90,10 @@ class LCEWrapper(PacedWrapper):
     def main_loop(self, j):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
    
-        plogits = self.model(input_ids=px, labels=op).logits
+        plogits = self.model(input_ids=px.to(self.device), labels=op).logits
         nlogits = []
-
         for _batch in batch_iter(nx, n=int(self.batch_size)):
-            nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
+            nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on)

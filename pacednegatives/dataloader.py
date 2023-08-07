@@ -106,6 +106,7 @@ class LCELoader:
         idx = np.arange(self.dataset.n_neg)
 
         probabilities = binom.pmf(idx, n, mean)
+        probabilities = binom.pmf(idx, n, mean)
         adjusted_probabilities = probabilities / probabilities.sum()
         adjusted_variance = np.var(adjusted_probabilities)
         scaling_factor = np.sqrt(self.var / adjusted_variance)
