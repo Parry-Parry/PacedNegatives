@@ -115,8 +115,8 @@ class LCEWrapper(PacedWrapper):
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
         self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
-                                                        # num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
-                                                         #num_training_steps=total_steps)
+                                                         num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
+                                                         num_training_steps=total_steps)
         
         start = time.time()
         
