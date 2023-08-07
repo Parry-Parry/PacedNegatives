@@ -112,7 +112,7 @@ class LCELoader:
         adjusted_probabilities *= scaling_factor
         adjusted_probabilities /= adjusted_probabilities.sum()
 
-        print(self.n, len(np.where(adjusted_probabilities > 0.)))
+        print(n, self.n, len(np.where(adjusted_probabilities > 0.)))
 
         return np.random.choice(idx, size=(self.n,), replace=False, p=adjusted_probabilities)
 
