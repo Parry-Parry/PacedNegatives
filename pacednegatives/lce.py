@@ -81,7 +81,7 @@ class LCEWrapper(PacedWrapper):
         self.meta_optimizer.step()
         self.meta_optimizer.zero_grad()
 
-        #self.meta_scheduler.step()
+        self.meta_scheduler.step()
 
         self.logs['loss']['meta'].append(loss.item())
         return loss.item()
@@ -89,13 +89,13 @@ class LCEWrapper(PacedWrapper):
     def main_loop(self, j):
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
    
-        plogits = self.model(input_ids=px.to(self.device), labels=op).logits.cpu()
+        plogits = self.model(input_ids=px.to(self.device), labels=op).logits
         nlogits = []
         for _batch in batch_iter(nx, n=int(self.batch_size)):
             nlogits.append(self.model(input_ids=_batch.to(self.device), labels=self.y_neg).logits.cpu())
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
-        loss = self.loss_fn(plogits, nlogits, op.cpu(), on)
+        loss = self.loss_fn(plogits, nlogits.cuda(), op, on)
         
         loss.backward()
         self.optimizer.step()
@@ -114,7 +114,7 @@ class LCEWrapper(PacedWrapper):
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
-        #self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
+        self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
                                                         # num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          #num_training_steps=total_steps)
         
@@ -130,13 +130,13 @@ class LCEWrapper(PacedWrapper):
                     wandb.log({'loss': loss, 
                                'meta_loss' : meta_loss, 
                                'lr': self.scheduler.get_last_lr()[0], 
-                               #'meta_lr' : self.meta_scheduler.get_last_lr()[0], 
+                               'meta_lr' : self.meta_scheduler.get_last_lr()[0], 
                                'difficulty': self.difficulty, 
                                'eta' : self.weights.eta.item()})
 
                 self.logs['loss']['main'].append(loss)
                 self.logs['lr']['main'].append(self.scheduler.get_last_lr()[0])
-                #self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
+                self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
               
