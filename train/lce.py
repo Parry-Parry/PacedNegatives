@@ -9,6 +9,7 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 import logging
 import wandb
 import numpy as np
+from typing import List
 
 def main(
         data : str, 
@@ -43,12 +44,12 @@ def main(
     ## INIT DATA ##
 
     with open(data, 'r') as f:
-        dataset = pd.read_json(f, orient='records', dtype={'qid': str, 'doc_id_a': str, 'doc_id_b': list})
+        dataset = pd.read_json(f, orient='records', dtype={'query_id': str, 'doc_id_a': str, 'doc_id_b': List[str]})
     corpus = irds.load(dataset_name)
 
     if sample: dataset = dataset.sample(frac=1).reset_index(drop=True)
 
-    pairs = dataset[['qid', 'doc_id_a']].values.tolist()
+    pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
     neg_idx = dataset['doc_id_b'].values
 
     print(neg_idx.shape)

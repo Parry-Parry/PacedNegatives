@@ -50,8 +50,5 @@ def compute_all_bm25(index_path : str,
 
     print('Completed BM25')
 
-        # .agg({'docno': list}).rename(columns={'docno': 'doc_id_b'}).reset_index()
-        
-
 if __name__ == '__main__':
     Fire(compute_all_bm25)
