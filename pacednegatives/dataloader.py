@@ -80,8 +80,6 @@ class LevelLoader:
 class LCEDataset:
     def __init__(self, pairs, neg_idx, corpus,max=False):
         self.neg_idx = [np.array(n) for n in neg_idx]
-        for x in self.neg_idx:
-            if len(x) < 1000: print(f'ERROR len {len(x)}')
         self.n_neg = len(neg_idx[0]) 
         self.docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
         self.queries = pd.DataFrame(corpus.queries_iter()).set_index('query_id').text.to_dict()
