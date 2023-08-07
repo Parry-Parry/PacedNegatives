@@ -39,7 +39,7 @@ class LCEWrapper(PacedWrapper):
         self.REL = self.tokenizer.encode('true')[0]
         self.NREL = self.tokenizer.encode('false')[0]
 
-        self.loss_fn = init_LCEcrossentropy(ignore_index=ignore_index, mean=use_mean)
+        self.loss_fn = init_LCEcrossentropy(ignore_index=ignore_index, use_mean=use_mean)
 
         self.meta_lr = meta_lr
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
