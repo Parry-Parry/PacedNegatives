@@ -55,7 +55,7 @@ def main(
     print(neg_idx.shape)
 
     dataset = LCEDataset(pairs, neg_idx, corpus, max)
-    loader = LCELoader(dataset, batch_size, var, n)
+    loader = LCELoader(dataset, batch_size, var, n, min=0.+1e-10, max=1.0-1e-10)
 
     ## INIT MODEL ##
 

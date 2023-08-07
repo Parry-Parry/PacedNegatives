@@ -94,14 +94,17 @@ class LCEDataset:
         return self.data[idx[0]], [self.docs[x] for x in self.neg_idx[idx[0]][idx[1]].tolist()]
     
 class LCELoader:
-    def __init__(self, dataset : Any, batch_size : int, var : float, n : int) -> None:
+    def __init__(self, dataset : Any, batch_size : int, var : float, n : int, min : float, max : float) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
         self.var = var
         self.n = n
         self.round = torch.floor
+        self.min = min
+        self.max = max
     
     def sample(self, mean):
+        mean = np.clip(mean, self.min, self.max)
         n = self.dataset.n_neg - 1
         idx = np.arange(self.dataset.n_neg)
 

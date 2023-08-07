@@ -29,7 +29,7 @@ class LCEWrapper(PacedWrapper):
                  use_mean : bool = None) -> None:
         super().__init__(dataset, model_name, batch_size, model_init, tokenizer, lr, ignore_index)
 
-        self.weights = LCEWeights(eta, device=self.device, min=0.+1e-10, max=1.0-1e-10)
+        self.weights = LCEWeights(eta, device=self.device)
         self.logs['eta'] = []
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []
@@ -64,7 +64,6 @@ class LCEWrapper(PacedWrapper):
 
 
     def meta_loop(self, j):
-        self.weights.clamp()
 
         px, nx, op, on = self.prep_batch(self.train_loader.get_batch(j, self.difficulty))
  
@@ -80,8 +79,6 @@ class LCEWrapper(PacedWrapper):
         loss.backward()
         self.meta_optimizer.step()
         self.meta_optimizer.zero_grad()
-
-        self.weights.clamp()
 
         self.meta_scheduler.step()
 
