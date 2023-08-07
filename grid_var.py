@@ -3,7 +3,7 @@ import subprocess as sp
 from os.path import join
 import numpy as np
 
-def main(script, data, dataset, out_dir, batch_size=16, lr=0.001, wandb_project=None, sample=False, mean=True):
+def main(script, data, dataset, out_dir, batch_size=16, lr=0.001, wandb_project=None, sample=False, mean=False):
     variance = [0.01, 0.025, 0.05, 0.0075, 0.1]
     N = [2, 4, 8, 16]
     start = -np.log(0.5)*0.5

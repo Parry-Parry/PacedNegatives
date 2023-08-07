@@ -122,7 +122,7 @@ class LCEWrapper(PacedWrapper):
         with _logger.pbar_raw(desc=f'train', total=total_steps) as pbar:
             for i in range(total_steps//self.train_loader.batch_size):
 
-                meta_loss = self.meta_loop(i)
+                meta_loss = self.meta_loop(i) if self.difficulty < 1. else 0.
                 loss = self.main_loop(i)
 
                 if wandb.run is not None:
@@ -138,9 +138,6 @@ class LCEWrapper(PacedWrapper):
                 self.logs['lr']['meta'].append(self.meta_scheduler.get_last_lr()[0])
                 self.logs['difficulty'].append(self.difficulty)
                 self.logs['eta'].append(self.weights.eta.item())
-
-                if i % 100 == 0:
-                    print('eta: %s', self.weights.eta.item())
               
                 self.difficulty = self.weights.eta.item()
                 pbar.set_postfix({'loss': np.mean(self.logs['loss']['main'])})
