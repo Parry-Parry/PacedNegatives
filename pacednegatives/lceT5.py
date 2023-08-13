@@ -128,7 +128,7 @@ class lceModel(pl.LightningModule):
             return output
 
         elif optimizer_idx == 1:    
-            plogits = self.model(n, on).logits
+            plogits = self.model(p, op).logits
             nlogits = []
             for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
                 nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
