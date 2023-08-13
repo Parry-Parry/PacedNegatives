@@ -1,18 +1,52 @@
 from collections import OrderedDict
+from pacednegatives.dataloader import LCEDataset
 import pytorch_lightning as pl
 from transformers import get_linear_schedule_with_warmup, AdamW
 import torch 
 import torch.nn as nn
+from torch.utils.data import DataLoader
+import ir_datasets as irds
+import pandas as pd
+from typing import List
+
+class LCEDataModule(pl.LightningDataModule):
+    def __init__(self, data_dir: str = "path/to/dir", corpus: str = "msmarco-passage", batch_size: int = 32, shuffle=False, max=False):
+        super().__init__()
+        self.data_dir = data_dir
+        self.corpus = irds.load(corpus)
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        self.max = max
+
+        self.weight = 0. + 1e-10
+
+    def setup(self, stage: str):
+        with open(self.data_dir, 'r') as f:
+            dataset = pd.read_json(f, orient='records', dtype={'query_id': str, 'doc_id_a': str, 'doc_id_b': List[str]})
+        if self.shuffle: dataset = dataset.sample(frac=1).reset_index(drop=True)
+
+        self.pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
+        self.neg_idx = dataset['doc_id_b'].values
+        self.dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.max)
+
+    def train_dataloader(self):
+        return DataLoader(self.dataset, batch_size=self.batch_size)
+
 
 def batch_iter(iterable, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
         yield iterable[ndx:min(ndx + n, l)]
 
+class ChangeDifficulty(pl.Callback):
+    def __init__(self):
+        pass 
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
+        trainer.train_dataloader.dataset.weight = min(1-1e-10, pl_module.weights.eta.item())
+
 class lceT5(pl.LightningModule):
     def __init__(self, hparams):
         from transformers import T5ForConditionalGeneration, T5Tokenizer
-        self.hparams = hparams
         self.model = T5ForConditionalGeneration.from_pretrained(hparams.model_name)
         self.tokenizer = T5Tokenizer.from_pretrained(hparams.model_name)
 
@@ -44,9 +78,10 @@ class lceModel(pl.LightningModule):
         self.weights = lceWeights(hparams)
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=hparams.ignore_index, reduction='none')
-    
+        self.y_neg = self.create_y(torch.ones(hparams.batch_size), token='false')
+
     def create_y(self, x, token='false'):
-        y = self.model.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+        y = self.model.tokenizer([[token]] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
         return y
 
     def prep_batch(self, batch):
@@ -83,9 +118,9 @@ class lceModel(pl.LightningModule):
             weights = self.weights(loss)
             loss = weights * loss
 
-            tqdm_dict = {'loss': loss.mean(), 'avg_weight': weights.mean()}
+            tqdm_dict = {'meta_loss': loss.mean(), 'avg_weight': weights.mean()}
             output = OrderedDict({
-                'loss': loss.mean(),
+                'meta_loss': loss.mean(),
                 'progress_bar': tqdm_dict,
                 'log': tqdm_dict
             })
@@ -98,6 +133,14 @@ class lceModel(pl.LightningModule):
                 nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
             loss = self.pair_loss(plogits, nlogits, op, on)
+
+            tqdm_dict = {'main_loss': loss.mean()}
+            output = OrderedDict({
+                'main_loss': loss.mean(),
+                'progress_bar': tqdm_dict,
+                'log': tqdm_dict
+            })
+            return output
 
     def configure_optimizers(self):
         meta_opt = AdamW(self.weights.parameters(), lr=self.hparams.meta_lr)

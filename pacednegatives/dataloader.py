@@ -94,7 +94,7 @@ class LCEDataset:
     def get(self, idx):
         return self.data[idx[0]], [self.docs[x] for x in self.neg_idx[idx[0]][idx[1]].tolist()]
     
-class LCELoader:
+class LCELoader(Dataset):
     def __init__(self, dataset : Any, batch_size : int, var : float, n : int, min : float, max : float) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
@@ -103,6 +103,7 @@ class LCELoader:
         self.round = torch.floor
         self.min = min
         self.max = max
+        self.weight = .0 + 1e-10
     
     def __len__(self):
         return int(len(self.dataset)/self.batch_size) 
@@ -140,10 +141,10 @@ class LCELoader:
     def format(self, q, d):
         return 'Query: ' + q + ' Document: ' + d + ' Relevant:'
 
-    def get_batch(self, idx, weight):
+    def get_batch(self, idx):
         px, nx = [], []
         for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
-            _idx = self.sample(weight)
+            _idx = self.sample(self.weight)
             qp, n = self.dataset.get((j, _idx))
             q, p = qp
             px.append(self.format(q, p))
