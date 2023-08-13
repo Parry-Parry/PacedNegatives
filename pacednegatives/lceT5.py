@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from pacednegatives.dataloader import LCEDataset
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 from transformers import get_linear_schedule_with_warmup, AdamW
 import torch 
 import torch.nn as nn
