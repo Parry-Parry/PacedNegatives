@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from pacednegatives.dataloader import LCEDataset
+from pacednegatives.dataloader import LCEDataset, LCELoader
 import lightning.pytorch as pl
 from transformers import get_linear_schedule_with_warmup, AdamW
 import torch 
@@ -27,7 +27,8 @@ class LCEDataModule(pl.LightningDataModule):
 
         self.pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
         self.neg_idx = dataset['doc_id_b'].values
-        self.dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.max)
+        dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.max)
+        self.dataset = LCELoader(dataset, self.batch_size, var=self.var, n=self.n, min=0.+1e-10, max=1.0-1e-10)
 
     def train_dataloader(self):
         return DataLoader(self.dataset, batch_size=self.batch_size)

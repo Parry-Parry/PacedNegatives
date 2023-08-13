@@ -153,18 +153,12 @@ class LCELoader(Dataset):
         return px, nx
 
     def __getitem__(self, idx):
-        px, nx = [], []
-        for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
-            _idx = self.sample(self.weight)
-            qp, n = self.dataset.get((j, _idx))
-            q, p = qp
-            px.append(self.format(q, p))
-            nx.extend(map(partial(self.format, q), n))
+        _idx = self.sample(self.weight)
+        qp, n = self.dataset.get((idx, _idx))
+        q, p = qp
 
-        return px, nx
-    
-
-    
+        return self.format(q, p), list(map(partial(self.format, q), n))
+     
 class TripletLoader:
     def __init__(self, dataset, batch_size) -> None:
         self.dataset = dataset
