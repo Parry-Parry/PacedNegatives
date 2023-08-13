@@ -40,16 +40,12 @@ class LCEWrapper():
             'loss' : defaultdict(list),
             'avg_weight' : defaultdict(list),
         }
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         self.model = model_init()
         self.tokenizer = tokenizer
         self.optimizer = AdamW(self.model.parameters(), lr=lr)
 
-        self.accelerator = Accelerator()
-        self.acc_device = self.accelerator.device
-
-        self.weights = LCEWeights(eta, device=self.acc_device)
+        self.weights = LCEWeights(eta, device=self.device)
         self.logs['eta'] = []
         self.logs['loss'] = {'main': [], 'meta' : []}
         self.logs['difficulty'] = []
@@ -64,22 +60,21 @@ class LCEWrapper():
         self.batch_size = batch_size
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
 
-    def create_y(self, x, device, token='false'):
-        y = self.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1).to(device)
+    def create_y(self, x, token='false'):
+        y = self.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
         return Variable(y, requires_grad=False)
 
-    def prep_batch(self, batch, device):
+    def prep_batch(self, batch):
         px, nx = batch
 
         px = self.tokenizer(px, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
-
         nx = self.tokenizer(nx, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
 
         px = Variable(px, requires_grad=False)
         nx = Variable(nx, requires_grad=False)
 
-        op = self.create_y(px, device, token='true')
-        on = self.create_y(nx, device, token='false')
+        op = self.create_y(px, token='true')
+        on = self.create_y(nx, token='false')
 
         return px, nx, op, on
 
@@ -91,7 +86,7 @@ class LCEWrapper():
             plogits = self.model(input_ids=px, labels=op).logits
             nlogits = []
             for _batch in batch_iter(nx, n=int(self.batch_size)):
-                nlogits.append(self.model(input_ids=_batch.to(self.acc_device), labels=self.y_neg).logits)
+                nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on, self.weights)
@@ -104,17 +99,17 @@ class LCEWrapper():
         return loss.item()
 
     def main_loop(self, i):
-        px, nx, op, on = self.prep_batch(self.train_loader.get_batch(i, self.difficulty), self.acc_device)
+        px, nx, op, on = self.prep_batch(self.train_loader.get_batch(i, self.difficulty))
    
-        plogits = self.model(input_ids=px.to(self.acc_device), labels=op).logits
+        plogits = self.model(input_ids=px, labels=op).logits
         nlogits = []
         for _batch in batch_iter(nx, n=int(self.batch_size)):
-            nlogits.append(self.model(input_ids=_batch.to(self.acc_device), labels=self.y_neg).logits)
+            nlogits.append(self.model(input_ids=_batch.to, labels=self.y_neg).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.train_loader.n, nlogits[0].size(-1)) # Resolve dimensionality issues
 
         loss = self.loss_fn(plogits, nlogits, op, on)
         
-        self.accelerator.backward(loss)
+        loss.backward()
         self.optimizer.step()
         self.scheduler.step()
         self.optimizer.zero_grad()
@@ -127,14 +122,13 @@ class LCEWrapper():
         self.total_steps = total_steps
         self.difficulty = self.weights.eta.item()
         self.train_loader = train_loader
-        self.y_neg = self.create_y(torch.ones(self.batch_size,), self.acc_device, token='false')
+        self.y_neg = self.create_y(torch.ones(self.batch_size,), token='false')
         self.scheduler = get_linear_schedule_with_warmup(self.optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
         self.meta_scheduler = get_linear_schedule_with_warmup(self.meta_optimizer, 
                                                          num_warmup_steps=warmup_steps // self.train_loader.batch_size if warmup_steps else (total_steps // 100), 
                                                          num_training_steps=total_steps)
-        self.model, self.optimizer, self.scheduler = self.accelerator.prepare(self.model, self.optimizer, self.scheduler, device_placement=[True, True, False])
         
         start = time.time()
         
