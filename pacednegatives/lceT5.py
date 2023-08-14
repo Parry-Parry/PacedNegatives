@@ -114,7 +114,8 @@ class LCEModel(pl.LightningModule):
     def prep_batch(self, batch):
         p, n = batch
 
-        print(p.shape, n.shape)
+        p = torch.squeeze(p, dim=1)
+        n = n.view(-1, n.size(-1))
 
         op = self.create_y(p, token='true')
         on = self.create_y(n, token='false')
