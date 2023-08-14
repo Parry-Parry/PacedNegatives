@@ -131,7 +131,7 @@ class LCEDataset(Dataset):
     
     def sample(self, mean):
         mean = np.clip(mean, self.min, self.max)
-        n = self.dataset.n_neg - 1
+        n = self.n_neg - 1
         idx = np.arange(self.n_neg)
 
         probabilities = binom.pmf(idx, n, mean)
