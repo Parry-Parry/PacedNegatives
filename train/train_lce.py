@@ -33,7 +33,7 @@ def main(data: str,
     
     os.makedirs(out_dir, exist_ok=True)
     
-
+    '''
     args = HParams(model_name='t5-base',
                      total_steps=total_steps,
                      eta=eta,
@@ -43,6 +43,19 @@ def main(data: str,
                      warmup_steps=warmup_steps,
                      use_mean=use_mean,
                      ignore_index=-100)
+    '''
+
+    args ={
+        'model_name': 't5-base',
+        'total_steps': total_steps,
+        'eta': eta,
+        'batch_size': batch_size,
+        'lr': lr,
+        'n': n,
+        'warmup_steps': warmup_steps,
+        'use_mean': use_mean,
+        'ignore_index': -100
+    }
 
     # set up wandb and pl trainer 
 
