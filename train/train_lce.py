@@ -71,7 +71,7 @@ def main(data: str,
     trainer_args = {
         'accelerator': 'gpu',
         'devices': num_gpus,
-        'strategy': 'ddp' if num_gpus > 1 else None,
+        'strategy': 'auto',
         'max_epochs': 1,
         'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger
