@@ -23,7 +23,7 @@ class LCEDataModule(pl.LightningDataModule):
     def collate(batch):
         batch = list(zip(*batch))
 
-    def setup(self, stage: str):
+    def setup(self, stage: str=None):
         with open(self.data_dir, 'r') as f:
             dataset = pd.read_json(f, orient='records', dtype={'query_id': str, 'doc_id_a': str, 'doc_id_b': List[str]})
         if self.shuffle: dataset = dataset.sample(frac=1).reset_index(drop=True)
