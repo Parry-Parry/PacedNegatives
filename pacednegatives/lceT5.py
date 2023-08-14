@@ -149,8 +149,7 @@ class LCEModel(pl.LightningModule):
 
         with torch.no_grad():
             plogits = self.model(**p, output_hidden_states=True )
-            for i in range(len(plogits.decoder_hidden_states)):
-                print(plogits.decoder_hidden_states[i].detach())
+            print(plogits.decoder_hidden_states[len(plogits.decoder_hidden_states)].detach())
             nlogits = self.model(**n).logits
         nlogits = nlogits.view(-1, self.hparams.n, nlogits.size(-1)) # Resolve dimensionality issues
         loss = self.pair_loss(plogits.logits, nlogits, p['labels'], n['labels'])

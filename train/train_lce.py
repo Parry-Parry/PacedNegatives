@@ -72,7 +72,7 @@ def main(data: str,
     logger = pl.loggers.WandbLogger(project=wandb_project)
     
     trainer_args = {
-        'accelerator': 'gpu',
+        'accelerator': 'auto',
         'devices': num_gpus,
         'max_epochs': 1,
         'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
