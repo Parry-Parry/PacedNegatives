@@ -32,10 +32,23 @@ class LCEDataModule(pl.LightningDataModule):
 
         self.weight = 0. + 1e-10
     
-    def collate(batch):
-       pos = [x['pos'] for x in batch]
-       neg = [x['neg'] for x in batch]  
+    def collate(self):
+        tokenizer = self.tokenizer
+        def collate_fn(batch):
+            pos = [x['pos'] for x in batch]
+            neg = [x['neg'] for x in batch]  
+            neg = list(itertools.chain(*neg))
 
+            # tokenize and pad
+            pos = tokenizer(pos, max_length=512, padding='max_length', truncation=True, return_tensors='pt')
+            neg = tokenizer(neg, max_length=512, padding='max_length', truncation=True, return_tensors='pt')
+
+            # create labels
+            pos['labels'] = tokenizer(['true'] * len(pos['input_ids']), padding=False, truncation=False, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+            neg['labels'] = tokenizer(['false'] * len(neg['input_ids']), padding=False, truncation=False, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+
+            return pos, neg
+        return collate_fn
         
 
     def setup(self, stage: str=None):
@@ -48,7 +61,7 @@ class LCEDataModule(pl.LightningDataModule):
         self.dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.tokenizer, self.batch_size, var=self.var, n=self.n, min=0.+1e-10, max=1.0-1e-10, use_max=self.use_max)
 
     def train_dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.batch_size, num_workers=4)
+        return DataLoader(self.dataset, batch_size=self.batch_size, num_workers=4, collate_fn=self.collate())
 
 def batch_iter(iterable, n=1):
     l = len(iterable)
@@ -106,6 +119,8 @@ class LCEModel(pl.LightningModule):
         for _n in tmp: 
             n.extend(list(_n))
 
+        print(len(n))
+
         p = self.tokenizer(p, max_length=512, return_tensors='pt', padding='max_length', truncation=True)
         n = self.tokenizer(n, max_length=512, return_tensors='pt', padding='max_length', truncation=True)
 
@@ -127,7 +142,7 @@ class LCEModel(pl.LightningModule):
         return ce
 
     def training_step(self, batch, batch_nb):
-        p, n = self.prep_batch(batch)
+        p, n = batch
 
         meta_opt, opt = self.optimizers()
         meta_scheduler, scheduler = self.lr_schedulers()

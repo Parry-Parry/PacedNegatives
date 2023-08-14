@@ -158,7 +158,7 @@ class LCEDataset(Dataset):
         qp, n = self.get((idx, _idx))
         q, p = qp
 
-        return self.format(q, p), list(map(partial(self.format, q), n))
+        return {'pos' : self.format(q, p), 'neg' : list(map(partial(self.format, q), n))}
      
 class TripletLoader:
     def __init__(self, dataset, batch_size) -> None:
