@@ -62,7 +62,7 @@ def main(data: str,
     model = LCEModel(args)
     # set up data module
     
-    data_module = LCEDataModule(data, dataset_name, model.model.tokenizer, batch_size, sample, use_max, var=var, n=n)
+    data_module = LCEDataModule(data, dataset_name, model.tokenizer, batch_size, sample, use_max, var=var, n=n)
     data_module.setup()
     
     # set up model
