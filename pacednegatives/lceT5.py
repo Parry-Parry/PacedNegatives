@@ -103,9 +103,14 @@ class LCEModel(pl.LightningModule):
         return y
 
     def prep_batch(self, batch):
-        p, n = batch
+        p, tmp = batch
+        n = []
+        for _n in tmp: 
+            print(list(_n))
+            n.extend(list(_n))
 
-        for _n in n: print(_n)
+        p = self.tokenizer(p, max_length=512, return_tensors='pt', padding='max_length', truncation=True).input_ids
+        n = self.tokenizer(n, max_length=512, return_tensors='pt', padding='max_length', truncation=True).input_ids
 
         op = self.create_y(p, token='true')
         on = self.create_y(n, token='false')
