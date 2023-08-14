@@ -49,7 +49,7 @@ def batch_iter(iterable, n=1):
 class ChangeDifficulty(pl.Callback):
     def __init__(self):
         pass 
-    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx):
+    def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
         trainer.train_dataloader.dataset.weight = min(1-1e-10, pl_module.weights.eta.item())
 
 class LCET5(pl.LightningModule):
