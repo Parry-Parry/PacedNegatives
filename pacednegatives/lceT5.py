@@ -106,13 +106,16 @@ class LCEModel(pl.LightningModule):
         for _n in tmp: 
             n.extend(list(_n))
 
-        p = self.tokenizer(p, max_length=512, return_tensors='pt', padding='max_length', truncation=True).input_ids.to(self.device)
-        n = self.tokenizer(n, max_length=512, return_tensors='pt', padding='max_length', truncation=True).input_ids.to(self.device)
+        p = self.tokenizer(p, max_length=512, return_tensors='pt', padding='max_length', truncation=True)
+        n = self.tokenizer(n, max_length=512, return_tensors='pt', padding='max_length', truncation=True)
 
-        op = self.create_y(p, token='true').to(self.device)
-        on = self.create_y(n, token='false').to(self.device)
+        p['labels'] = self.create_y(p, token='true')
+        n['labels'] = self.create_y(n, token='false')
 
-        return p, n, op, on
+        p = p.to(self.device)
+        n = n.to(self.device)
+
+        return p, n
     
     def pair_loss(self, p, n, op, on):
         pce = self.loss_fn(p.view(-1, n.size(-1)), op.view(-1))
@@ -124,17 +127,18 @@ class LCEModel(pl.LightningModule):
         return ce
 
     def training_step(self, batch, batch_nb):
-        p, n, op, on = self.prep_batch(batch)
+        p, n = self.prep_batch(batch)
+
         meta_opt, opt = self.optimizers()
         meta_scheduler, scheduler = self.lr_schedulers()
 
         with torch.no_grad():
-            plogits = self.model(input_ids=p, labels=op).logits
+            plogits = self.model(**p).logits
             nlogits = []
             for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
-                nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.device)).logits)
+                nlogits.append(self.model(**_batch).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
-        loss = self.pair_loss(plogits, nlogits, op, on)
+        loss = self.pair_loss(plogits, nlogits, p['labels'], n['labels'])
 
         weights = self.weights(loss)
         meta_loss = weights * loss
