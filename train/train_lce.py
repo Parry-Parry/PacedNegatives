@@ -65,7 +65,6 @@ def main(data: str,
     
     # set up model
     model = LCEModel(args)
-    model.setup()
 
     logger = pl.loggers.WandbLogger(project=wandb_project)
     
