@@ -100,6 +100,7 @@ class LCEModel(pl.LightningModule):
 
     def create_y(self, x, token='false'):
         y = self.tokenizer([token] * len(x), max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+        print(y)
         return y
 
     def prep_batch(self, batch):
@@ -134,7 +135,7 @@ class LCEModel(pl.LightningModule):
             for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
                 nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.device)).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
-
+        print(plogits, nlogits[:2])
         loss = self.pair_loss(plogits, nlogits, op, on)
 
         weights = self.weights(loss)
