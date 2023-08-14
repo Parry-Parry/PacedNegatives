@@ -136,6 +136,8 @@ class LCEModel(pl.LightningModule):
                 'progress_bar': tqdm_dict,
                 'log': tqdm_dict
             })
+            self.log('avg_weight', weights.mean())
+            self.log('meta_loss', loss.mean(), prog_bar=True, logger=True, on_step=True, on_epoch=True)
             return output
 
         elif optimizer_idx == 1:    
@@ -152,6 +154,7 @@ class LCEModel(pl.LightningModule):
                 'progress_bar': tqdm_dict,
                 'log': tqdm_dict
             })
+            self.log('main_loss', loss.mean(), prog_bar=True, logger=True, on_step=True, on_epoch=True)
             return output
 
     def configure_optimizers(self):
