@@ -91,7 +91,9 @@ class LCEModel(pl.LightningModule):
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.hparams.ignore_index, reduction='none')
         self.y_neg = self.create_y(torch.ones(self.hparams.batch_size), token='false')
+        self.automatic_optimization = False
         self.save_hyperparameters()
+
     def create_y(self, x, token='false'):
         y = self.model.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
         return y
@@ -118,44 +120,48 @@ class LCEModel(pl.LightningModule):
 
     def training_step(self, batch, batch_nb, optimizer_idx):
         p, n, op, on = self.prep_batch(batch)
+        meta_opt, opt = self.optimizers()
+        meta_scheduler, scheduler = self.lr_schedulers()
 
-        if optimizer_idx == 0:
-            with torch.no_grad():
-                plogits = self.model(input_ids=p, labels=op).logits
-                nlogits = []
-                for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
-                    nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.model.device)).logits)
-            nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
-            loss = self.pair_loss(plogits, nlogits, op, on)
-            weights = self.weights(loss)
-            loss = weights * loss
-
-            tqdm_dict = {'meta_loss': loss.mean(), 'avg_weight': weights.mean()}
-            output = OrderedDict({
-                'meta_loss': loss.mean(),
-                'progress_bar': tqdm_dict,
-                'log': tqdm_dict
-            })
-            self.log('avg_weight', weights.mean())
-            self.log('meta_loss', loss.mean(), prog_bar=True, logger=True, on_step=True, on_epoch=True)
-            return output
-
-        elif optimizer_idx == 1:    
+        with torch.no_grad():
             plogits = self.model(input_ids=p, labels=op).logits
             nlogits = []
             for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
                 nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.model.device)).logits)
-            nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
-            loss = self.pair_loss(plogits, nlogits, op, on)
+        nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
+        loss = self.pair_loss(plogits, nlogits, op, on)
+        weights = self.weights(loss)
+        meta_loss = weights * loss
 
-            tqdm_dict = {'main_loss': loss.mean()}
-            output = OrderedDict({
-                'main_loss': loss.mean(),
-                'progress_bar': tqdm_dict,
-                'log': tqdm_dict
-            })
-            self.log('main_loss', loss.mean(), prog_bar=True, logger=True, on_step=True, on_epoch=True)
-            return output
+        meta_opt.zero_grad()
+        self.manual_backward(meta_loss.mean())
+        meta_opt.step()
+        meta_scheduler.step()
+
+        self.log('avg_weight', weights.mean())
+        self.log('meta_loss', loss.mean(), prog_bar=True, logger=True, on_step=True, on_epoch=True)
+
+        plogits = self.model(input_ids=p, labels=op).logits
+        nlogits = []
+        for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
+            nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.model.device)).logits)
+        nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
+        main_loss = self.pair_loss(plogits, nlogits, op, on)
+        
+        opt.zero_grad()
+        self.manual_backward(main_loss.mean())
+        opt.step()
+        scheduler.step()
+
+        tqdm_dict = {'meta_loss': loss.mean(), 'avg_weight': weights.mean(), 'main_loss': loss.mean()}
+        output = OrderedDict({
+            'main_loss': main_loss.mean(),
+            'meta_loss': meta_loss.mean(),
+            'progress_bar': tqdm_dict,
+            'log': tqdm_dict
+        })
+        self.log('main_loss', loss.mean(), prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        return output
 
     def configure_optimizers(self):
         meta_opt = AdamW(self.weights.parameters(), lr=self.hparams.meta_lr)
