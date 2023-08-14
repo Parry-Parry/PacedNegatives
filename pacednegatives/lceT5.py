@@ -95,21 +95,17 @@ class LCEModel(pl.LightningModule):
         self.weights = LCEWeights(self.hparams)
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.hparams.ignore_index, reduction='none')
-        self.y_neg = self.create_y(torch.ones(self.hparams.batch_size), token='false')
         self.automatic_optimization = False
         self.save_hyperparameters()
 
     def create_y(self, x, token='false'):
         y = self.tokenizer([token] * len(x), max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
-        print(y)
         return y
 
     def prep_batch(self, batch):
-        print(batch)
         p, n = batch
 
-        p = torch.squeeze(p, dim=1)
-        n = n.view(-1, n.size(-1))
+        for _n in n: print(_n)
 
         op = self.create_y(p, token='true')
         on = self.create_y(n, token='false')
@@ -137,7 +133,6 @@ class LCEModel(pl.LightningModule):
             for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
                 nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.device)).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
-        print(plogits, nlogits[:2])
         loss = self.pair_loss(plogits, nlogits, op, on)
 
         weights = self.weights(loss)
