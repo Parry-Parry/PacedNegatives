@@ -77,7 +77,8 @@ class LCEWeights(pl.LightningModule):
 
 class LCEModel(pl.LightningModule):
     def __init__(self, hparams):
-        self.hparams = hparams
+        for key in hparams.keys():
+            self.hparams[key]=hparams[key]
         self.model = LCET5(hparams)
         self.weights = LCEWeights(hparams)
 
