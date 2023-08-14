@@ -4,37 +4,47 @@ from pacednegatives.lceT5 import LCEModel, LCEDataModule, ChangeDifficulty
 import os
 import lightning.pytorch as pl
 
-def main(data : str, 
-         dataset_name : str, 
-         out_dir : str, 
-         total_steps : int = 100000, 
-         eta : float = 0.0, 
-         batch_size : int = 16, 
-         lr : float = 0.001, 
-         var : float = 0.01,
-         n : int = 2,
-         use_max = True,
-         warmup_steps=10000,
-         sample=False,
-         use_mean=True,
-         num_gpus=1,
-         wandb_project=None):
+class HParams(NamedTuple):
+    model_name : str 
+    total_steps : int
+    eta : float
+    batch_size : int 
+    lr : float 
+    var : float
+    n : int
+    warmup_steps : int 
+    use_mean : bool 
+    ignore_index : int 
+
+def main(data: str, 
+         dataset_name: str, 
+         out_dir: str, 
+         total_steps: int = 100000, 
+         eta: float = 0.0, 
+         batch_size: int = 16, 
+         lr: float = 0.001, 
+         var: float = 0.01, 
+         n: int = 2, 
+         use_max: bool = True, 
+         warmup_steps: int = 10000,
+         sample: bool = False, 
+         use_mean: bool = True, 
+         num_gpus: int = 1, 
+         wandb_project: str = None):
     
     os.makedirs(out_dir, exist_ok=True)
-
-    class hparams(NamedTuple):
-        model_name : str = 't5-base'
-        total_steps : int = total_steps
-        eta : float = eta
-        batch_size : int = batch_size
-        lr : float = lr
-        var : float = var
-        n : int = n
-        warmup_steps : int = warmup_steps
-        use_mean : bool = use_mean
-        ignore_index : int = -100
     
-    args = hparams()
+
+    args = HParams(model_name='t5-base',
+                     total_steps=total_steps,
+                     eta=eta,
+                     batch_size=batch_size,
+                     lr=lr,
+                     var=var,
+                     n=n,
+                     warmup_steps=warmup_steps,
+                     use_mean=use_mean,
+                     ignore_index=-100)
 
     # set up wandb and pl trainer 
 
