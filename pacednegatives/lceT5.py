@@ -114,7 +114,7 @@ class LCEModel(pl.LightningModule):
                 plogits = self.model(input_ids=p, labels=op).logits
                 nlogits = []
                 for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
-                    nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
+                    nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.model.device)).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
             loss = self.pair_loss(plogits, nlogits, op, on)
             weights = self.weights(loss)
@@ -132,7 +132,7 @@ class LCEModel(pl.LightningModule):
             plogits = self.model(input_ids=p, labels=op).logits
             nlogits = []
             for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
-                nlogits.append(self.model(input_ids=_batch, labels=self.y_neg).logits)
+                nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.model.device)).logits)
             nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
             loss = self.pair_loss(plogits, nlogits, op, on)
 
