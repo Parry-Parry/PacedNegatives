@@ -70,7 +70,7 @@ def main(data: str,
     
     # set up trainer
     trainer = pl.Trainer(
-        gpus=num_gpus,
+        num_nodes=num_gpus,
         max_epochs=1,
         progress_bar_refresh_rate=20,
         callbacks=[pl.callbacks.ProgressBar(), ChangeDifficulty()],

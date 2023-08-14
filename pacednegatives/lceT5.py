@@ -23,7 +23,11 @@ class LCEDataModule(pl.LightningDataModule):
         self.weight = 0. + 1e-10
     
     def collate(batch):
-        batch = list(zip(*batch))
+        p, n = [], []
+        for b in batch:
+            p.append(b[0])
+            n.extend(b[1])
+        return p, n
 
     def setup(self, stage: str=None):
         with open(self.data_dir, 'r') as f:
