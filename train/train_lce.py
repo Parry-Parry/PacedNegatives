@@ -73,12 +73,14 @@ def main(data: str,
     trainer_args = {
         'accelerator': 'gpu',
         'devices': num_gpus,
-        'strategy': 'auto',
         'max_epochs': 1,
         'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger,
         #'detect_anomaly' : True
     }
+
+    if num_gpus > 1:
+        trainer_args['strategy'] = 'ddp'
 
     # set up trainer
     trainer = pl.Trainer(**trainer_args)   

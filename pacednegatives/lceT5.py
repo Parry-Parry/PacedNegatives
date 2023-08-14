@@ -153,7 +153,7 @@ class LCEModel(pl.LightningModule):
                 print(plogits.decoder_hidden_states[i].detach())
             nlogits = self.model(**n).logits
         nlogits = nlogits.view(-1, self.hparams.n, nlogits.size(-1)) # Resolve dimensionality issues
-        loss = self.pair_loss(plogits, nlogits, p['labels'], n['labels'])
+        loss = self.pair_loss(plogits.logits, nlogits, p['labels'], n['labels'])
 
         weights = self.weights(loss)
         meta_loss = weights * loss
