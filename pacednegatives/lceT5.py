@@ -124,7 +124,6 @@ class LCEModel(pl.LightningModule):
 
     def training_step(self, batch, batch_nb):
         p, n, op, on = self.prep_batch(batch)
-        print(p, n[:2])
         op, on = op.to(self.device), on.to(self.device)
         meta_opt, opt = self.optimizers()
         meta_scheduler, scheduler = self.lr_schedulers()

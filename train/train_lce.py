@@ -77,7 +77,7 @@ def main(data: str,
         'max_epochs': 1,
         'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger,
-        'detect_anomaly' : True
+        #'detect_anomaly' : True
     }
 
     # set up trainer
