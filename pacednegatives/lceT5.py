@@ -32,7 +32,8 @@ class LCEDataModule(pl.LightningDataModule):
 
         self.weight = 0. + 1e-10
     
-    def collate(batch):
+    def collate(*batch):
+        print(batch)
         p, n = [], []
         for b in batch:
             p.append(b[0])
@@ -49,7 +50,7 @@ class LCEDataModule(pl.LightningDataModule):
         self.dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.tokenizer, self.batch_size, var=self.var, n=self.n, min=0.+1e-10, max=1.0-1e-10, use_max=self.use_max)
 
     def train_dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.batch_size, num_workers=4)
+        return DataLoader(self.dataset, batch_size=self.batch_size, num_workers=4, collate_fn=self.collate)
 
 def batch_iter(iterable, n=1):
     l = len(iterable)

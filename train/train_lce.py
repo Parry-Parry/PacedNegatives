@@ -90,7 +90,7 @@ def main(data: str,
     trainer.fit(model, data_module)
 
     # save model
-    model.model.model.save_pretrained(os.path.join(out_dir, 'model'))
+    model.model.save_pretrained(os.path.join(out_dir, 'model'))
 
 if __name__ == '__main__':
     Fire(main)
