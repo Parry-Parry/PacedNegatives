@@ -151,7 +151,7 @@ class LCEDataset(Dataset):
     
     def format(self, q, d):
         x = 'Query: ' + q + ' Document: ' + d + ' Relevant:'
-        return self.tokenizer(x, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
+        return self.tokenizer(x, padding=True, max_length=512, return_tensors='pt').input_ids
 
     def __getitem__(self, idx):
         _idx = self.sample(self.weight)

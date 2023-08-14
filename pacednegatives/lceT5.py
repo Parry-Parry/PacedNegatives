@@ -108,7 +108,7 @@ class LCEModel(pl.LightningModule):
         self.save_hyperparameters()
 
     def create_y(self, x, token='false'):
-        y = self.model.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+        y = self.model.tokenizer([token] * len(x), padding=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
         return y
 
     def prep_batch(self, batch):
