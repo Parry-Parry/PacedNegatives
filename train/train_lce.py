@@ -68,15 +68,17 @@ def main(data: str,
 
     logger = pl.loggers.WandbLogger(project=wandb_project)
     
+    trainer_args = {
+        'accelerator': 'gpu',
+        'devices': num_gpus,
+        'strategy': 'ddp' if num_gpus > 1 else None,
+        'max_epochs': 1,
+        'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
+        'logger': logger
+    }
+
     # set up trainer
-    trainer = pl.Trainer(
-        accelerator="gpu", 
-        devices=8, 
-        strategy="ddp",
-        max_epochs=1,
-        callbacks=[pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
-        logger=logger,
-    )   
+    trainer = pl.Trainer(**trainer_args)   
     
     # train
     trainer.fit(model, data_module)
