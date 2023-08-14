@@ -32,13 +32,11 @@ class LCEDataModule(pl.LightningDataModule):
 
         self.weight = 0. + 1e-10
     
-    def collate(*batch):
-        print(batch)
-        p, n = [], []
-        for b in batch:
-            p.append(b[0])
-            n.extend(b[1])
-        return p, n
+    def collate(batch):
+       pos = [x['pos'] for x in batch]
+       neg = [x['neg'] for x in batch]  
+
+        
 
     def setup(self, stage: str=None):
         with open(self.data_dir, 'r') as f:
@@ -106,14 +104,13 @@ class LCEModel(pl.LightningModule):
         p, tmp = batch
         n = []
         for _n in tmp: 
-            print(list(_n))
             n.extend(list(_n))
 
-        p = self.tokenizer(p, max_length=512, return_tensors='pt', padding='max_length', truncation=True).input_ids
-        n = self.tokenizer(n, max_length=512, return_tensors='pt', padding='max_length', truncation=True).input_ids
+        p = self.tokenizer(p, max_length=512, return_tensors='pt', padding='max_length', truncation=True).input_ids.to(self.device)
+        n = self.tokenizer(n, max_length=512, return_tensors='pt', padding='max_length', truncation=True).input_ids.to(self.device)
 
-        op = self.create_y(p, token='true')
-        on = self.create_y(n, token='false')
+        op = self.create_y(p, token='true').to(self.device)
+        on = self.create_y(n, token='false').to(self.device)
 
         return p, n, op, on
     
@@ -128,7 +125,6 @@ class LCEModel(pl.LightningModule):
 
     def training_step(self, batch, batch_nb):
         p, n, op, on = self.prep_batch(batch)
-        op, on = op.to(self.device), on.to(self.device)
         meta_opt, opt = self.optimizers()
         meta_scheduler, scheduler = self.lr_schedulers()
 
