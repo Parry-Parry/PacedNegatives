@@ -61,7 +61,7 @@ class LCEWrapper():
         self.meta_optimizer = torch.optim.Adam(self.weights.parameters(), lr=self.meta_lr)
 
     def create_y(self, x, token='false'):
-        y = self.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+        y = self.tokenizer([[token]] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
         return Variable(y, requires_grad=False)
 
     def prep_batch(self, batch):

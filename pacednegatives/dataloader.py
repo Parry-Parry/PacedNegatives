@@ -77,7 +77,7 @@ class LevelLoader:
             o_n.append(OUTPUTS[1])
 
         return px, nx, o_p, o_n
-
+'''
 class LCEDataset:
     def __init__(self, pairs, neg_idx, corpus,max=False):
         self.neg_idx = [np.array(n) for n in neg_idx]
@@ -93,25 +93,46 @@ class LCEDataset:
     
     def get(self, idx):
         return self.data[idx[0]], [self.docs[x] for x in self.neg_idx[idx[0]][idx[1]].tolist()]
-    
-class LCELoader(Dataset):
-    def __init__(self, dataset : Any, batch_size : int, var : float, n : int, min : float, max : float) -> None:
-        self.dataset = dataset
+  '''  
+class LCEDataset(Dataset):
+    def __init__(self, 
+                 pairs, 
+                 neg_idx, 
+                 corpus, 
+                 batch_size : int, 
+                 var : float, 
+                 n : int, 
+                 min : float, 
+                 max : float, 
+                 use_max=False,) -> None:
+        
+        self.neg_idx = [np.array(n) for n in neg_idx]
+        self.n_neg = len(neg_idx[0]) 
+        self.docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
+        self.queries = pd.DataFrame(corpus.queries_iter()).set_index('query_id').text.to_dict()
+        self.round = ceil if use_max else floor
+
+        self.data = [(self.queries[q], self.docs[p]) for q, p in pairs]
+
         self.batch_size = batch_size
         self.var = var
         self.n = n
         self.round = torch.floor
         self.min = min
         self.max = max
+
         self.weight = .0 + 1e-10
+
+    def get(self, idx):
+        return self.data[idx[0]], [self.docs[x] for x in self.neg_idx[idx[0]][idx[1]].tolist()]
     
     def __len__(self):
-        return int(len(self.dataset)/self.batch_size) 
+        return len(self.data)
     
     def sample(self, mean):
         mean = np.clip(mean, self.min, self.max)
         n = self.dataset.n_neg - 1
-        idx = np.arange(self.dataset.n_neg)
+        idx = np.arange(self.n_neg)
 
         probabilities = binom.pmf(idx, n, mean)
         probabilities = binom.pmf(idx, n, mean)
@@ -134,9 +155,6 @@ class LCELoader(Dataset):
             new = torch.unique(sample2idx(torch.normal(mean, self.var, size=(self.n - len(initial),))), dim=0)
             initial = torch.unique(torch.cat((initial, new), dim=0))
         return initial.to_numpy()
-
-    def __len__(self):
-        return len(self.dataset)
     
     def format(self, q, d):
         return 'Query: ' + q + ' Document: ' + d + ' Relevant:'
@@ -145,7 +163,7 @@ class LCELoader(Dataset):
         px, nx = [], []
         for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
             _idx = self.sample(self.weight)
-            qp, n = self.dataset.get((j, _idx))
+            qp, n = self.get((j, _idx))
             q, p = qp
             px.append(self.format(q, p))
             nx.extend(map(partial(self.format, q), n))
@@ -154,7 +172,7 @@ class LCELoader(Dataset):
 
     def __getitem__(self, idx):
         _idx = self.sample(self.weight)
-        qp, n = self.dataset.get((idx, _idx))
+        qp, n = self.get((idx, _idx))
         q, p = qp
 
         return self.format(q, p), list(map(partial(self.format, q), n))

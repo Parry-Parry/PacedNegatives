@@ -1,9 +1,7 @@
 from collections import namedtuple
 from fire import Fire
-from pacednegatives.lceT5 import lceModel, LCEDataModule, ChangeDifficulty
-from pacednegatives.dataloader import LCEDataset, LCELoader
+from pacednegatives.lceT5 import LCEModel, LCEDataModule, ChangeDifficulty
 import os
-import lighting as L
 import lightning.pytorch as pl
 
 def main(data : str, 
@@ -15,28 +13,29 @@ def main(data : str,
         lr : float = 0.001, 
         var : float = 0.01,
         n : int = 2,
-        use_max=True,
-        warmup_steps=0,
+        use_max = True,
+        warmup_steps=10000,
         sample=False,
         use_mean=True,
-        wandb_project=None,):
+        num_gpus=1,
+        wandb_project=None
+        ):
     
     os.makedirs(out_dir, exist_ok=True)
 
     hparams = namedtuple(
         'hparams',
-        [
+        [   
+            ('model_name', 't5-base'),
             ('total_steps', total_steps),
             ('eta', eta),
             ('batch_size', batch_size),
             ('lr', lr),
             ('var', var),
             ('n', n),
-            ('max', max),
             ('warmup_steps', warmup_steps),
-            ('sample', sample),
             ('use_mean', use_mean),
-            ('wandb_project', wandb_project),
+            ('ignore_index', -100),
         ]
     )
 
@@ -47,19 +46,25 @@ def main(data : str,
     data_module.setup()
     
     # set up model
-    model = lceModel(hparams)
+    model = LCEModel(hparams)
     model.setup()
+
+    logger = pl.loggers.WandbLogger(project=wandb_project)
     
     # set up trainer
     trainer = pl.Trainer(
-        gpus=1,
+        gpus=num_gpus,
         max_epochs=1,
         progress_bar_refresh_rate=20,
         callbacks=[pl.callbacks.ProgressBar(), ChangeDifficulty()],
+        logger=logger,
     )   
     
     # train
     trainer.fit(model, data_module)
+
+    # save model
+    model.model.model.save_pretrained(os.path.join(out_dir, 'model'))
 
 if __name__ == '__main__':
     Fire(main)
