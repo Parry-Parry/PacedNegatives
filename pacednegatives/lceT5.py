@@ -2,7 +2,7 @@ from collections import OrderedDict
 import itertools
 from pacednegatives.dataloader import LCEDataset
 import lightning.pytorch as pl
-from transformers import get_linear_schedule_with_warmup, AdamW
+from transformers import get_linear_schedule_with_warmup, AdamW, T5ForConditionalGeneration, T5Tokenizer
 import torch 
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -65,16 +65,6 @@ class ChangeDifficulty(pl.Callback):
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
         trainer.train_dataloader.dataset.weight = min(1-1e-10, pl_module.weights.eta.item())
 
-class LCET5(pl.LightningModule):
-    def __init__(self, hparams):
-        super().__init__()
-        from transformers import T5ForConditionalGeneration, T5Tokenizer
-        self.model = T5ForConditionalGeneration.from_pretrained(hparams.model_name)
-        self.tokenizer = T5Tokenizer.from_pretrained(hparams.model_name)
-
-    def forward(self, **kwargs):
-        return self.model(**kwargs)
-
 class LCEWeights(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
@@ -99,7 +89,8 @@ class LCEModel(pl.LightningModule):
         super().__init__()
         for key in hparams.keys():
             self.hparams[key]=hparams[key]
-        self.model = LCET5(self.hparams)
+        self.model = T5ForConditionalGeneration.from_pretrained(self.hparams.model_name)
+        self.tokenizer = T5Tokenizer.from_pretrained(self.hparams.model_name)
         self.weights = LCEWeights(self.hparams)
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.hparams.ignore_index, reduction='none')
@@ -108,7 +99,7 @@ class LCEModel(pl.LightningModule):
         self.save_hyperparameters()
 
     def create_y(self, x, token='false'):
-        y = self.model.tokenizer([token] * len(x), max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+        y = self.tokenizer([token] * len(x), max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
         return y
 
     def prep_batch(self, batch):
