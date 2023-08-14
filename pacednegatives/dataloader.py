@@ -99,6 +99,7 @@ class LCEDataset(Dataset):
                  pairs, 
                  neg_idx, 
                  corpus, 
+                 tokenizer,
                  batch_size : int, 
                  var : float, 
                  n : int, 
@@ -111,7 +112,7 @@ class LCEDataset(Dataset):
         self.docs = pd.DataFrame(corpus.docs_iter()).set_index('doc_id').text.to_dict()
         self.queries = pd.DataFrame(corpus.queries_iter()).set_index('query_id').text.to_dict()
         self.round = ceil if use_max else floor
-
+        self.tokenizer = tokenizer
         self.data = [(self.queries[q], self.docs[p]) for q, p in pairs]
 
         self.batch_size = batch_size
@@ -147,35 +148,17 @@ class LCEDataset(Dataset):
         except ValueError:
             print(f'Failed to sample with mean {mean} and var {self.var}')
             exit()
-
-    def torch_sample(self, mean):
-        sample2idx = lambda x : self.round(torch.clamp(x, 0.0, 1.0) * self.n_neg)
-        initial = torch.unique(sample2idx(torch.normal(mean, self.var, size=(self.n,))), dim=0)
-        while len(initial) < self.n:
-            new = torch.unique(sample2idx(torch.normal(mean, self.var, size=(self.n - len(initial),))), dim=0)
-            initial = torch.unique(torch.cat((initial, new), dim=0))
-        return initial.to_numpy()
     
     def format(self, q, d):
-        return 'Query: ' + q + ' Document: ' + d + ' Relevant:'
-
-    def get_batch(self, idx):
-        px, nx = [], []
-        for j in range(idx * self.batch_size, (idx + 1) * self.batch_size):
-            _idx = self.sample(self.weight)
-            qp, n = self.get((j, _idx))
-            q, p = qp
-            px.append(self.format(q, p))
-            nx.extend(map(partial(self.format, q), n))
-
-        return px, nx
+        x = 'Query: ' + q + ' Document: ' + d + ' Relevant:'
+        return self.tokenizer(x, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
 
     def __getitem__(self, idx):
         _idx = self.sample(self.weight)
         qp, n = self.get((idx, _idx))
         q, p = qp
 
-        return (self.format(q, p), list(map(partial(self.format, q), n)))
+        return self.format(q, p), torch.cat(list(map(partial(self.format, q), n)), dim=0)
      
 class TripletLoader:
     def __init__(self, dataset, batch_size) -> None:

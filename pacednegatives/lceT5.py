@@ -8,13 +8,22 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import ir_datasets as irds
 import pandas as pd
-from typing import List
+from typing import List, Any
 
 class LCEDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str = "path/to/dir", corpus: str = "msmarco-passage", batch_size: int = 32, shuffle=False, use_max=False, var=0.01, n=2):
+    def __init__(self, 
+                 data_dir: str = "path/to/dir", 
+                 corpus: str = "msmarco-passage", 
+                 tokenizer : Any = None,
+                 batch_size: int = 32, 
+                 shuffle=False, 
+                 use_max=False, 
+                 var=0.01, 
+                 n=2):
         super().__init__()
         self.data_dir = data_dir
         self.corpus = irds.load(corpus)
+        self.tokenizer = tokenizer
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.use_max = use_max
@@ -37,7 +46,7 @@ class LCEDataModule(pl.LightningDataModule):
 
         self.pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
         self.neg_idx = dataset['doc_id_b'].values
-        self.dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.batch_size, var=self.var, n=self.n, min=0.+1e-10, max=1.0-1e-10, use_max=self.use_max)
+        self.dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.tokenizer, self.batch_size, var=self.var, n=self.n, min=0.+1e-10, max=1.0-1e-10, use_max=self.use_max)
 
     def train_dataloader(self):
         return DataLoader(self.dataset, batch_size=self.batch_size, num_workers=4)
@@ -104,13 +113,8 @@ class LCEModel(pl.LightningModule):
 
     def prep_batch(self, batch):
         p, n = batch
-        p = list(p)
-        n = concatenate([list(_n) for _n in n])
 
         print(p, n)
-
-        p = self.model.tokenizer(p, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
-        n = self.model.tokenizer(n, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
 
         op = self.create_y(p, token='true')
         on = self.create_y(n, token='false')

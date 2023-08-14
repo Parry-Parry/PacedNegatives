@@ -59,14 +59,14 @@ def main(data: str,
         'ignore_index': -100
     }
 
-    # set up wandb and pl trainer 
-
+    model = LCEModel(args)
     # set up data module
-    data_module = LCEDataModule(data, dataset_name, batch_size, sample, use_max, var=var, n=n)
+    
+    data_module = LCEDataModule(data, dataset_name, model.model.tokenizer, batch_size, sample, use_max, var=var, n=n)
     data_module.setup()
     
     # set up model
-    model = LCEModel(args)
+   
 
     logger = pl.loggers.WandbLogger(project=wandb_project)
     
