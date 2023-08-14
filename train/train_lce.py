@@ -10,7 +10,6 @@ class HParams(NamedTuple):
     eta : float
     batch_size : int 
     lr : float 
-    var : float
     n : int
     warmup_steps : int 
     use_mean : bool 
