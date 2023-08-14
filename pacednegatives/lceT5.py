@@ -89,7 +89,7 @@ class LCEWeights(pl.LightningModule):
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
-                weight[i] = loss[i] * torch.zeros(1, requires_grad=True) * self.eta
+                weight[i] = loss[i] * torch.zeros(1, requires_grad=True).to(loss.device) * self.eta
             else:
                 weight[i] = self.weighting(loss[i], self.eta)
         return weight
