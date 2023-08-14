@@ -100,6 +100,8 @@ class LCEModel(pl.LightningModule):
 
     def prep_batch(self, batch):
         p, n = batch
+        print(p)
+        print(n)
 
         p = self.model.tokenizer(p, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
         n = self.model.tokenizer(n, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
