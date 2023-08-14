@@ -117,8 +117,6 @@ class LCEModel(pl.LightningModule):
         p = torch.squeeze(p, dim=1)
         n = n.view(-1, n.size(-1))
 
-        print(p.shape, n.shape)
-
         op = self.create_y(p, token='true')
         on = self.create_y(n, token='false')
 
@@ -146,6 +144,7 @@ class LCEModel(pl.LightningModule):
                 nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.device)).logits)
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
         loss = self.pair_loss(plogits, nlogits, op, on)
+        print(loss.item())
         weights = self.weights(loss)
         print(weights)
         meta_loss = weights * loss
