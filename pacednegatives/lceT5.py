@@ -10,13 +10,15 @@ import pandas as pd
 from typing import List
 
 class LCEDataModule(pl.LightningDataModule):
-    def __init__(self, data_dir: str = "path/to/dir", corpus: str = "msmarco-passage", batch_size: int = 32, shuffle=False, use_max=False):
+    def __init__(self, data_dir: str = "path/to/dir", corpus: str = "msmarco-passage", batch_size: int = 32, shuffle=False, use_max=False, var=0.01, n=2):
         super().__init__()
         self.data_dir = data_dir
         self.corpus = irds.load(corpus)
         self.batch_size = batch_size
         self.shuffle = shuffle
         self.use_max = use_max
+        self.var = var
+        self.n = n
 
         self.weight = 0. + 1e-10
     

@@ -40,7 +40,6 @@ def main(data: str,
                      eta=eta,
                      batch_size=batch_size,
                      lr=lr,
-                     var=var,
                      n=n,
                      warmup_steps=warmup_steps,
                      use_mean=use_mean,
@@ -49,7 +48,7 @@ def main(data: str,
     # set up wandb and pl trainer 
 
     # set up data module
-    data_module = LCEDataModule(data, dataset_name, batch_size, sample, use_max)
+    data_module = LCEDataModule(data, dataset_name, batch_size, sample, use_max, var=var, n=n)
     data_module.setup()
     
     # set up model
