@@ -117,6 +117,8 @@ class LCEModel(pl.LightningModule):
         p = torch.squeeze(p, dim=1)
         n = n.view(-1, n.size(-1))
 
+        print(p.shape, n.shape)
+
         op = self.create_y(p, token='true')
         on = self.create_y(n, token='false')
 
@@ -145,6 +147,7 @@ class LCEModel(pl.LightningModule):
         nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
         loss = self.pair_loss(plogits, nlogits, op, on)
         weights = self.weights(loss)
+        print(weights)
         meta_loss = weights * loss
 
         meta_opt.zero_grad()
@@ -153,7 +156,7 @@ class LCEModel(pl.LightningModule):
         meta_scheduler.step()
 
         self.log('avg_weight', weights.mean())
-        self.log('meta_loss', loss.mean(), prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        self.log('meta_loss', loss.mean())
 
         plogits = self.model(input_ids=p, labels=op).logits
         nlogits = []
@@ -174,7 +177,7 @@ class LCEModel(pl.LightningModule):
             'progress_bar': tqdm_dict,
             'log': tqdm_dict
         })
-        self.log('main_loss', loss.mean(), prog_bar=True, logger=True, on_step=True, on_epoch=True)
+        self.log('main_loss', loss.mean())
         return output
 
     def configure_optimizers(self):
