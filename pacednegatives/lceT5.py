@@ -148,7 +148,11 @@ class LCEModel(pl.LightningModule):
         meta_scheduler, scheduler = self.lr_schedulers()
 
         with torch.no_grad():
-            plogits = self.model(**p).logits
+            plogits = self.model(**p, output_hidden_states=True )
+            for i in range(len(plogits.encoder_hidden_states)):
+                print(plogits.encoder_hidden_states[i].detach())
+            for i in range(len(plogits.decoder_hidden_states)):
+                print(plogits.decoder_hidden_states[i].detach())
             nlogits = self.model(**n).logits
         nlogits = nlogits.view(-1, self.hparams.n, nlogits.size(-1)) # Resolve dimensionality issues
         loss = self.pair_loss(plogits, nlogits, p['labels'], n['labels'])
