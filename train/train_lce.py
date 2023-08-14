@@ -72,7 +72,6 @@ def main(data: str,
     trainer = pl.Trainer(
         num_nodes=num_gpus,
         max_epochs=1,
-        progress_bar_refresh_rate=20,
         callbacks=[pl.callbacks.ProgressBar(), ChangeDifficulty()],
         logger=logger,
     )   
