@@ -81,6 +81,9 @@ def main(data: str,
 
     # set up trainer
     trainer = pl.Trainer(**trainer_args)   
+
+    tuner = pl.tuner.Tuner(trainer)
+    tuner.scale_batch_size(model, mode="power", datamodule=data_module)
     
     # train
     trainer.fit(model, data_module)

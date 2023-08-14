@@ -85,7 +85,7 @@ class LCEWeights(pl.LightningModule):
         return (-x/y)
     
     def forward(self, loss):
-        weight = torch.zeros(loss.size())
+        weight = torch.zeros(loss.size()).to(loss.device)
 
         for i in range(len(loss)):
             if loss[i] > self.eta:
