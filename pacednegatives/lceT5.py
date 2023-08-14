@@ -107,6 +107,8 @@ class LCEModel(pl.LightningModule):
         p = list(p)
         n = concatenate([list(_n) for _n in n])
 
+        print(p, n)
+
         p = self.model.tokenizer(p, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
         n = self.model.tokenizer(n, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
 
