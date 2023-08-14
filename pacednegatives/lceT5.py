@@ -50,6 +50,7 @@ class ChangeDifficulty(pl.Callback):
 
 class LCET5(pl.LightningModule):
     def __init__(self, hparams):
+        super().__init__()
         from transformers import T5ForConditionalGeneration, T5Tokenizer
         self.model = T5ForConditionalGeneration.from_pretrained(hparams.model_name)
         self.tokenizer = T5Tokenizer.from_pretrained(hparams.model_name)
@@ -59,6 +60,7 @@ class LCET5(pl.LightningModule):
 
 class LCEWeights(pl.LightningModule):
     def __init__(self, hparams):
+        super().__init__()
         self.eta = nn.Parameter(torch.tensor([hparams.eta]), requires_grad=True)
         self.register_parameter('eta_value', self.eta)
 
@@ -77,6 +79,7 @@ class LCEWeights(pl.LightningModule):
 
 class LCEModel(pl.LightningModule):
     def __init__(self, hparams):
+        super().__init__()
         for key in hparams.keys():
             self.hparams[key]=hparams[key]
         self.model = LCET5(self.hparams)
