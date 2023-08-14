@@ -91,7 +91,7 @@ class LCEModel(pl.LightningModule):
 
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.hparams.ignore_index, reduction='none')
         self.y_neg = self.create_y(torch.ones(self.hparams.batch_size), token='false')
-
+        self.save_hyperparameters()
     def create_y(self, x, token='false'):
         y = self.model.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
         return y
