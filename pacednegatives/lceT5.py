@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import itertools
 from pacednegatives.dataloader import LCEDataset
 import lightning.pytorch as pl
 from transformers import get_linear_schedule_with_warmup, AdamW
@@ -45,6 +46,9 @@ def batch_iter(iterable, n=1):
     l = len(iterable)
     for ndx in range(0, l, n):
         yield iterable[ndx:min(ndx + n, l)]
+
+def concatenate(*lists):
+    return itertools.chain.from_iterable(lists)
 
 class ChangeDifficulty(pl.Callback):
     def __init__(self):
@@ -100,8 +104,8 @@ class LCEModel(pl.LightningModule):
 
     def prep_batch(self, batch):
         p, n = batch
-        print(p)
-        print(n)
+        p = list(p)
+        n = concatenate([list(_n) for _n in n])
 
         p = self.model.tokenizer(p, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
         n = self.model.tokenizer(n, padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids
