@@ -121,8 +121,8 @@ class LCEModel(pl.LightningModule):
 
         print(len(n))
 
-        p = self.tokenizer(p, max_length=512, return_tensors='pt', padding='max_length', truncation=True)
-        n = self.tokenizer(n, max_length=512, return_tensors='pt', padding='max_length', truncation=True)
+        p = self.tokenizer(p, max_length=512, return_tensors='pt', truncation=True)
+        n = self.tokenizer(n, max_length=512, return_tensors='pt', truncation=True)
 
         p['labels'] = self.create_y(p, token='true')
         n['labels'] = self.create_y(n, token='false')
