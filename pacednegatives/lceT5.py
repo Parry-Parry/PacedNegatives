@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import itertools
 from pacednegatives.dataloader import LCEDataset
-import lightning.pytorch as pl
+import lightning as pl
 from transformers import get_linear_schedule_with_warmup, AdamW, T5ForConditionalGeneration, T5Tokenizer
 import torch 
 import torch.nn as nn

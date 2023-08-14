@@ -3,6 +3,7 @@ from fire import Fire
 from pacednegatives.lceT5 import LCEModel, LCEDataModule, ChangeDifficulty
 import os
 import lightning.pytorch as pl
+import lightning as L
 
 class HParams(NamedTuple):
     model_name : str 
@@ -83,7 +84,7 @@ def main(data: str,
         trainer_args['strategy'] = 'ddp'
 
     # set up trainer
-    trainer = pl.Trainer(**trainer_args)   
+    trainer = L.Trainer(**trainer_args)   
 
     #tuner = pl.tuner.Tuner(trainer)
     #tuner.scale_batch_size(model, mode="power", datamodule=data_module)
