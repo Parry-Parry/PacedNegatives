@@ -1,43 +1,40 @@
-from collections import namedtuple
+from typing import NamedTuple
 from fire import Fire
 from pacednegatives.lceT5 import LCEModel, LCEDataModule, ChangeDifficulty
 import os
 import lightning.pytorch as pl
 
 def main(data : str, 
-        dataset_name : str, 
-        out_dir : str, 
-        total_steps : int = 100000, 
-        eta : float = 0.0,
-        batch_size : int = 16, 
-        lr : float = 0.001, 
-        var : float = 0.01,
-        n : int = 2,
-        use_max = True,
-        warmup_steps=10000,
-        sample=False,
-        use_mean=True,
-        num_gpus=1,
-        wandb_project=None
-        ):
+         dataset_name : str, 
+         out_dir : str, 
+         total_steps : int = 100000, 
+         eta : float = 0.0, 
+         batch_size : int = 16, 
+         lr : float = 0.001, 
+         var : float = 0.01,
+         n : int = 2,
+         use_max = True,
+         warmup_steps=10000,
+         sample=False,
+         use_mean=True,
+         num_gpus=1,
+         wandb_project=None):
     
     os.makedirs(out_dir, exist_ok=True)
 
-    hparams = namedtuple(
-        'hparams',
-        [   
-            ('model_name', 't5-base'),
-            ('total_steps', total_steps),
-            ('eta', eta),
-            ('batch_size', batch_size),
-            ('lr', lr),
-            ('var', var),
-            ('n', n),
-            ('warmup_steps', warmup_steps),
-            ('use_mean', use_mean),
-            ('ignore_index', -100),
-        ]
-    )
+    class hparams(NamedTuple):
+        model_name : str = 't5-base'
+        total_steps : int = total_steps
+        eta : float = eta
+        batch_size : int = batch_size
+        lr : float = lr
+        var : float = var
+        n : int = n
+        warmup_steps : int = warmup_steps
+        use_mean : bool = use_mean
+        ignore_index : int = -100
+    
+    args = hparams()
 
     # set up wandb and pl trainer 
 
@@ -46,7 +43,7 @@ def main(data : str,
     data_module.setup()
     
     # set up model
-    model = LCEModel(hparams)
+    model = LCEModel(args)
     model.setup()
 
     logger = pl.loggers.WandbLogger(project=wandb_project)
