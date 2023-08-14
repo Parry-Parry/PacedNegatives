@@ -79,11 +79,11 @@ class LCEModel(pl.LightningModule):
     def __init__(self, hparams):
         for key in hparams.keys():
             self.hparams[key]=hparams[key]
-        self.model = LCET5(hparams)
-        self.weights = LCEWeights(hparams)
+        self.model = LCET5(self.hparams)
+        self.weights = LCEWeights(self.hparams)
 
-        self.loss_fn = nn.CrossEntropyLoss(ignore_index=hparams.ignore_index, reduction='none')
-        self.y_neg = self.create_y(torch.ones(hparams.batch_size), token='false')
+        self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.hparams.ignore_index, reduction='none')
+        self.y_neg = self.create_y(torch.ones(self.hparams.batch_size), token='false')
 
     def create_y(self, x, token='false'):
         y = self.model.tokenizer([token] * len(x), padding=True, truncation=True, max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
