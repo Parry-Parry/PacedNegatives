@@ -134,10 +134,8 @@ class LCEModel(pl.LightningModule):
 
         with torch.no_grad():
             plogits = self.model(**p).logits
-            nlogits = []
-            for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
-                nlogits.append(self.model(**_batch).logits)
-        nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
+            nlogits = self.model(**n).logits
+        nlogits = nlogits.view(-1, self.hparams.n, nlogits.size(-1)) # Resolve dimensionality issues
         loss = self.pair_loss(plogits, nlogits, p['labels'], n['labels'])
 
         weights = self.weights(loss)
@@ -151,12 +149,10 @@ class LCEModel(pl.LightningModule):
         self.log('avg_weight', weights.mean())
         self.log('meta_loss', loss.mean())
 
-        plogits = self.model(input_ids=p, labels=op).logits
-        nlogits = []
-        for _batch in batch_iter(n, n=int(self.hparams.batch_size)):
-            nlogits.append(self.model(input_ids=_batch, labels=self.create_y(_batch, token='false').to(self.device)).logits)
-        nlogits = torch.cat(nlogits, dim=0).view(-1, self.hparams.n, nlogits[0].size(-1)) # Resolve dimensionality issues
-        main_loss = self.pair_loss(plogits, nlogits, op, on)
+        plogits = self.model(**p).logits
+        nlogits = self.model(**n).logits
+        nlogits = nlogits.view(-1, self.hparams.n, nlogits.size(-1)) # Resolve dimensionality issues
+        main_loss = self.pair_loss(plogits, nlogits, p['labels'], n['labels'])
         
         opt.zero_grad()
         self.manual_backward(main_loss.mean())
