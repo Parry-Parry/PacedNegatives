@@ -73,7 +73,8 @@ def main(data: str,
     
     trainer_args = {
         'devices' : num_gpus,
-        'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
+        #'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
+        'callbacks': [pl.callbacks.ProgressBar(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger,
         #'detect_anomaly' : True
         'max_steps' : total_steps//batch_size
