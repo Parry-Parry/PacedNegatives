@@ -72,6 +72,7 @@ def main(data: str,
     logger = pl.loggers.WandbLogger(project=wandb_project)
     
     trainer_args = {
+        'accelerator' : 'cpu',
         'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger,
         #'detect_anomaly' : True
