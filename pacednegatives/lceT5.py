@@ -84,7 +84,7 @@ class LCEWeights(pl.LightningModule):
         self.register_parameter('eta_value', self.eta)
 
     def weighting(self, x, y):
-        return (-x/y)
+        return (x/y)
     
     def forward(self, loss):
         weight = torch.zeros(loss.size()).to(loss.device)
