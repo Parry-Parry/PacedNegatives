@@ -32,7 +32,7 @@ def main(data: str,
          use_mean: bool = False, 
          num_gpus: int = 1, 
          wandb_project: str = None):
-    
+    pl.seed_everything(42, workers=True)
     os.makedirs(out_dir, exist_ok=True)
     
     '''
@@ -77,7 +77,7 @@ def main(data: str,
         #'callbacks': [pl.callbacks.ProgressBar(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger,
         #'detect_anomaly' : True
-        'max_steps' : total_steps//batch_size
+        'max_epochs' : 1
     }
 
     if num_gpus > 1:
