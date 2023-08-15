@@ -73,10 +73,9 @@ def concatenate(*lists):
     return list(itertools.chain(*lists))
 
 class ChangeDifficulty(pl.Callback):
-    def __init__(self):
-        pass 
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
-        trainer.train_dataloader.dataset.weight = min(1-1e-10, pl_module.weights.eta.item())
+        print(vars(trainer.train_dataloader.dataset))
+        trainer.train_dataloader.dataset.weight = min(1-1e-10, pl_module.difficulty)
 
 class LCEWeights(pl.LightningModule):
     def __init__(self, hparams):
@@ -109,6 +108,8 @@ class LCEModel(pl.LightningModule):
         self.loss_fn = nn.CrossEntropyLoss(ignore_index=self.hparams.ignore_index, reduction='none')
         self.automatic_optimization = False
         self.save_hyperparameters()
+
+        self.difficulty = self.weights.eta.item()
 
     def create_y(self, x, token='false'):
         y = self.tokenizer([token] * len(x), max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
@@ -182,6 +183,7 @@ class LCEModel(pl.LightningModule):
             'log': tqdm_dict
         })
         self.log('main_loss', loss.mean())
+        self.difficulty = self.weights.eta.item()
         return output
 
     def configure_optimizers(self):
