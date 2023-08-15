@@ -155,7 +155,7 @@ class LCEDataset(Dataset):
         return x
 
     def __getitem__(self, idx):
-        _idx = self.sample(self.weight.item())
+        _idx = self.sample(self.weight)
         qp, n = self.get((idx, _idx))
         q, p = qp
 
