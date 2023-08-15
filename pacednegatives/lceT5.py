@@ -112,7 +112,7 @@ class LCEModel(pl.LightningModule):
     def create_y(self, x, token='false'):
         y = self.tokenizer([token] * len(x), max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
         return y
-
+    '''
     def prep_batch(self, batch):
         p, tmp = batch
         n = []
@@ -129,7 +129,7 @@ class LCEModel(pl.LightningModule):
         n = n.to(self.device)
 
         return p, n
-    
+    '''
     def pair_loss(self, p, n, op, on):
         pce = self.loss_fn(p.view(-1, n.size(-1)), op.view(-1))
         nce = self.loss_fn(n.view(-1, n.size(-1)), on.view(-1))
@@ -140,7 +140,7 @@ class LCEModel(pl.LightningModule):
         return ce
 
     def training_step(self, batch, batch_nb):
-        print(self.model.dtype)
+        print(self.strategy)
         p, n = batch
 
         meta_opt, opt = self.optimizers()
