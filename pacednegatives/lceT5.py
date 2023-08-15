@@ -74,7 +74,7 @@ def concatenate(*lists):
 
 class ChangeDifficulty(pl.Callback):
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
-        print(trainer.train_dataloader.dataset.weight)
+        #setattr(trainer.train_dataloader.dataset.weight, 'weight', min(1-1e-10, pl_module.difficulty))
         trainer.train_dataloader.dataset.weight = min(1-1e-10, pl_module.difficulty)
 
 class LCEWeights(pl.LightningModule):
