@@ -131,6 +131,7 @@ class LCEDataset(Dataset):
         return len(self.data)
     
     def sample(self, mean):
+        print(mean)
         mean = np.clip(mean, self.min, self.max)
         n = self.n_neg - 1
         idx = np.arange(self.n_neg)

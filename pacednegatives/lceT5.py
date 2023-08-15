@@ -76,7 +76,7 @@ class ChangeDifficulty(pl.Callback):
         pass 
     def on_train_batch_start(self, trainer, pl_module, batch, batch_idx):
         trainer.train_dataloader.dataset.weight = min(1-1e-10, pl_module.weights.eta.item())
-        print(trainer.train_dataloader.dataset.weight)
+
 class LCEWeights(pl.LightningModule):
     def __init__(self, hparams):
         super().__init__()
