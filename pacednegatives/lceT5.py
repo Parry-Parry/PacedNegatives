@@ -40,8 +40,8 @@ class LCEDataModule(pl.LightningDataModule):
             neg = list(itertools.chain(*neg))
 
             # tokenize and pad
-            pos = tokenizer(pos, max_length=512, padding='max_length', truncation=True, return_tensors='pt')
-            neg = tokenizer(neg, max_length=512, padding='max_length', truncation=True, return_tensors='pt')
+            pos = tokenizer(pos, max_length=512, truncation=True, return_tensors='pt')
+            neg = tokenizer(neg, max_length=512, truncation=True, return_tensors='pt')
 
             # create labels
             pos['labels'] = tokenizer(['true'] * len(pos['input_ids']), padding=False, truncation=False, return_tensors='pt').input_ids[:, 0].view(-1, 1)
@@ -118,8 +118,6 @@ class LCEModel(pl.LightningModule):
         n = []
         for _n in tmp: 
             n.extend(list(_n))
-
-        print(len(n))
 
         p = self.tokenizer(p, max_length=512, return_tensors='pt', truncation=True)
         n = self.tokenizer(n, max_length=512, return_tensors='pt', truncation=True)
