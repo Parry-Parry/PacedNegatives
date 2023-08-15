@@ -145,7 +145,7 @@ class LCEModel(pl.LightningModule):
         p, n = batch
 
         meta_opt, opt = self.optimizers()
-        #meta_scheduler, scheduler = self.lr_schedulers()
+        meta_scheduler, scheduler = self.lr_schedulers()
 
         with torch.no_grad():
             plogits = self.model(**p, output_hidden_states=False)
@@ -159,7 +159,7 @@ class LCEModel(pl.LightningModule):
         meta_opt.zero_grad()
         self.manual_backward(meta_loss.mean())
         meta_opt.step()
-        #meta_scheduler.step()
+        meta_scheduler.step()
 
         self.log('avg_weight', weights.mean())
         self.log('meta_loss', meta_loss.mean())
@@ -173,7 +173,7 @@ class LCEModel(pl.LightningModule):
         opt.zero_grad()
         self.manual_backward(main_loss.mean())
         opt.step()
-        #scheduler.step()
+        scheduler.step()
 
         tqdm_dict = {'meta_loss': loss.mean(), 'avg_weight': weights.mean(), 'main_loss': loss.mean()}
         output = OrderedDict({
@@ -197,5 +197,5 @@ class LCEModel(pl.LightningModule):
                                                 num_warmup_steps=self.hparams.warmup_steps, 
                                                 num_training_steps=self.hparams.total_steps)
         
-        return [meta_opt, opt]
-        #return [meta_opt, opt], [meta_sched, sched]
+        #return [meta_opt, opt]
+        return [meta_opt, opt], [meta_sched, sched]
