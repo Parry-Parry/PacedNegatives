@@ -81,7 +81,6 @@ def main(data: str,
 
     if num_gpus > 1:
         trainer_args['strategy'] = 'ddp'
-        trainer_args['accelerator'] = 'gpu'
 
     # set up trainer
     trainer = L.Trainer(**trainer_args)   

@@ -160,7 +160,8 @@ class LCEModel(pl.LightningModule):
         meta_scheduler.step()
 
         self.log('avg_weight', weights.mean())
-        self.log('meta_loss', loss.mean())
+        self.log('meta_loss', meta_loss.mean())
+        self.log('eta', self.weights.eta.item())
 
         plogits = self.model(**p).logits
         nlogits = self.model(**n).logits
