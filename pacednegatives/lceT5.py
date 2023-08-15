@@ -19,7 +19,8 @@ class LCEDataModule(pl.LightningDataModule):
                  shuffle=False, 
                  use_max=False, 
                  var=0.01, 
-                 n=2):
+                 n=2,
+                 init_weight=0.+1e-10):
         super().__init__()
         self.data_dir = data_dir
         self.corpus = irds.load(corpus)
@@ -30,7 +31,7 @@ class LCEDataModule(pl.LightningDataModule):
         self.var = var
         self.n = n
 
-        self.weight = 0. + 1e-10
+        self.weight = init_weight
     
     def collate(self):
         tokenizer = self.tokenizer
@@ -58,7 +59,7 @@ class LCEDataModule(pl.LightningDataModule):
 
         self.pairs = dataset[['query_id', 'doc_id_a']].values.tolist()
         self.neg_idx = dataset['doc_id_b'].values
-        self.dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.tokenizer, self.batch_size, var=self.var, n=self.n, min=0.+1e-10, max=1.0-1e-10, use_max=self.use_max)
+        self.dataset = LCEDataset(self.pairs, self.neg_idx, self.corpus, self.tokenizer, self.weight, self.batch_size, var=self.var, n=self.n, min=0.+1e-10, max=1.0-1e-10, use_max=self.use_max)
 
     def train_dataloader(self):
         return DataLoader(self.dataset, batch_size=self.batch_size, num_workers=4, collate_fn=self.collate())

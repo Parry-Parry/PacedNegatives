@@ -100,6 +100,7 @@ class LCEDataset(Dataset):
                  neg_idx, 
                  corpus, 
                  tokenizer,
+                 init_weight,
                  batch_size : int, 
                  var : float, 
                  n : int, 
@@ -122,7 +123,7 @@ class LCEDataset(Dataset):
         self.min = min
         self.max = max
 
-        self.weight = .0 + 1e-10
+        self.weight = init_weight
 
     def get(self, idx):
         return self.data[idx[0]], [self.docs[x] for x in self.neg_idx[idx[0]][idx[1]].tolist()]
@@ -131,7 +132,6 @@ class LCEDataset(Dataset):
         return len(self.data)
     
     def sample(self, mean):
-        print(mean)
         mean = np.clip(mean, self.min, self.max)
         n = self.n_neg - 1
         idx = np.arange(self.n_neg)
@@ -155,7 +155,7 @@ class LCEDataset(Dataset):
         return x
 
     def __getitem__(self, idx):
-        _idx = self.sample(self.weight)
+        _idx = self.sample(self.weight.item())
         qp, n = self.get((idx, _idx))
         q, p = qp
 
