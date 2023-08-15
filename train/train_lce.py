@@ -26,10 +26,10 @@ def main(data: str,
          meta_lr = None,
          var: float = 0.01, 
          n: int = 2, 
-         use_max: bool = True, 
+         use_max: bool = False, 
          warmup_steps: int = 10000,
          sample: bool = False, 
-         use_mean: bool = True, 
+         use_mean: bool = False, 
          num_gpus: int = 1, 
          wandb_project: str = None):
     
