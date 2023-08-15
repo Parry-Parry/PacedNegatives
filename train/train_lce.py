@@ -49,13 +49,13 @@ def main(data: str,
 
     args ={
         'model_name': 't5-base',
-        'total_steps': total_steps,
+        'total_steps': total_steps//batch_size,
         'eta': eta,
         'batch_size': batch_size,
         'lr': lr,
         'meta_lr' : lr if not meta_lr else meta_lr,
         'n': n,
-        'warmup_steps': warmup_steps,
+        'warmup_steps': warmup_steps//batch_size,
         'use_mean': use_mean,
         'ignore_index': -100
     }
@@ -76,7 +76,7 @@ def main(data: str,
         'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger,
         #'detect_anomaly' : True
-        'max_steps' : total_steps
+        'max_steps' : total_steps//batch_size
     }
 
     if num_gpus > 1:
