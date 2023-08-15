@@ -141,13 +141,14 @@ class LCEModel(pl.LightningModule):
 
     def training_step(self, batch, batch_nb):
         p, n = batch
+        print(p)
 
         meta_opt, opt = self.optimizers()
         meta_scheduler, scheduler = self.lr_schedulers()
 
         with torch.no_grad():
             plogits = self.model(**p, output_hidden_states=True)
-            print(plogits.decoder_hidden_states[len(plogits.decoder_hidden_states)-1].detach())
+            print(plogits.decoder_hidden_states[len(plogits.decoder_hidden_states)-1].detach(), plogits.decoder_hidden_states[len(plogits.decoder_hidden_states)-2].detach())
             nlogits = self.model(**n).logits
         nlogits = nlogits.view(-1, self.hparams.n, nlogits.size(-1)) # Resolve dimensionality issues
         loss = self.pair_loss(plogits.logits, nlogits, p['labels'], n['labels'])

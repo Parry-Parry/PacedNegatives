@@ -72,7 +72,7 @@ def main(data: str,
     logger = pl.loggers.WandbLogger(project=wandb_project)
     
     trainer_args = {
-        'accelerator' : 'cpu',
+        'devices' : num_gpus,
         'callbacks': [pl.callbacks.ProgressBar(), ChangeDifficulty(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger,
         #'detect_anomaly' : True
@@ -80,7 +80,6 @@ def main(data: str,
     }
 
     if num_gpus > 1:
-        trainer_args['devices'] = num_gpus
         trainer_args['strategy'] = 'ddp'
         trainer_args['accelerator'] = 'gpu'
 
