@@ -197,5 +197,5 @@ class LCEModel(pl.LightningModule):
                                                 num_warmup_steps=self.hparams.warmup_steps, 
                                                 num_training_steps=self.hparams.total_steps)
         
-        
-        return [meta_opt, opt], [meta_sched, sched]
+        return [meta_opt, opt]
+        #return [meta_opt, opt], [meta_sched, sched]
