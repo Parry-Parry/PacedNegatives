@@ -140,6 +140,7 @@ class LCEModel(pl.LightningModule):
         return ce
 
     def training_step(self, batch, batch_nb):
+        print(self.model.dtype)
         p, n = batch
 
         meta_opt, opt = self.optimizers()
