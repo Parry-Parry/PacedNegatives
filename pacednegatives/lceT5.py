@@ -40,14 +40,14 @@ class LCEDataModule(pl.LightningDataModule):
             neg = list(itertools.chain(*neg))
 
             # tokenize and pad
-            pos = tokenizer(pos, max_length=512, truncation=True, return_tensors='pt')
-            neg = tokenizer(neg, max_length=512, truncation=True, return_tensors='pt')
+            pos = tokenizer(pos, padding=True, return_tensors='pt')
+            neg = tokenizer(neg, padding=True, return_tensors='pt')
 
             # create labels
-            pos['labels'] = tokenizer(['true'] * len(pos['input_ids']), padding=False, truncation=False, return_tensors='pt').input_ids[:, 0].view(-1, 1)
-            neg['labels'] = tokenizer(['false'] * len(neg['input_ids']), padding=False, truncation=False, return_tensors='pt').input_ids[:, 0].view(-1, 1)
+            pos['labels'] = tokenizer(['true'] * len(pos['input_ids']), padding=True, return_tensors='pt').input_ids
+            neg['labels'] = tokenizer(['false'] * len(neg['input_ids']), padding=True, return_tensors='pt').input_ids
 
-            return pos, neg
+            return {'input_ids' : pos.input_ids, 'labels' : pos.labels}, {'input_ids' : neg.input_ids, 'labels' : neg.labels}
         return collate_fn
         
 
@@ -119,8 +119,8 @@ class LCEModel(pl.LightningModule):
         for _n in tmp: 
             n.extend(list(_n))
 
-        p = self.tokenizer(p, max_length=512, return_tensors='pt', truncation=True)
-        n = self.tokenizer(n, max_length=512, return_tensors='pt', truncation=True)
+        p = self.tokenizer(p, max_length=512, padding=True, truncation=True, return_tensors='pt')
+        n = self.tokenizer(n, max_length=512, padding=True, truncation=True, return_tensors='pt')
 
         p['labels'] = self.create_y(p, token='true')
         n['labels'] = self.create_y(n, token='false')
