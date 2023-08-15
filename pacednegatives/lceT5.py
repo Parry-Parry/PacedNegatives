@@ -133,7 +133,7 @@ class LCEModel(pl.LightningModule):
         return p, n
     '''
     def pair_loss(self, p, n, op, on):
-        pce = self.loss_fn(p.view(-1, n.size(-1)), op.view(-1))
+        pce = self.loss_fn(p.view(-1, p.size(-1)), op.view(-1))
         nce = self.loss_fn(n.view(-1, n.size(-1)), on.view(-1))
         nce = nce.view(-1, n.size(-2))
         nce = torch.mean(nce, dim=1) if self.hparams.use_mean else torch.sum(nce, dim=1)
