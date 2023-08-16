@@ -32,7 +32,7 @@ def main(data: str,
          use_mean: bool = False, 
          num_gpus: int = 1, 
          wandb_project: str = None):
-    pl.seed_everything(42, workers=True)
+    #pl.seed_everything(42, workers=True)
     os.makedirs(out_dir, exist_ok=True)
     
     '''
