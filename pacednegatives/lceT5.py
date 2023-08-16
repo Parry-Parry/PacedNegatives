@@ -111,27 +111,6 @@ class LCEModel(pl.LightningModule):
 
         self.difficulty = self.weights.eta.item()
 
-    def create_y(self, x, token='false'):
-        y = self.tokenizer([token] * len(x), max_length=512, return_tensors='pt').input_ids[:, 0].view(-1, 1)
-        return y
-    '''
-    def prep_batch(self, batch):
-        p, tmp = batch
-        n = []
-        for _n in tmp: 
-            n.extend(list(_n))
-
-        p = self.tokenizer(p, max_length=512, padding=True, truncation=True, return_tensors='pt')
-        n = self.tokenizer(n, max_length=512, padding=True, truncation=True, return_tensors='pt')
-
-        p['labels'] = self.create_y(p, token='true')
-        n['labels'] = self.create_y(n, token='false')
-
-        p = p.to(self.device)
-        n = n.to(self.device)
-
-        return p, n
-    '''
     def pair_loss(self, p, n, op, on):
         pce = self.loss_fn(p.view(-1, p.size(-1)), op.view(-1))
         nce = self.loss_fn(n.view(-1, n.size(-1)), on.view(-1))
@@ -145,7 +124,7 @@ class LCEModel(pl.LightningModule):
         p, n = batch
 
         meta_opt, opt = self.optimizers()
-        #meta_scheduler, scheduler = self.lr_schedulers()
+        meta_scheduler, scheduler = self.lr_schedulers()
 
         with torch.no_grad():
             plogits = self.model(**p, output_hidden_states=False)
@@ -159,7 +138,7 @@ class LCEModel(pl.LightningModule):
         meta_opt.zero_grad()
         self.manual_backward(meta_loss.mean())
         meta_opt.step()
-        #meta_scheduler.step()
+        meta_scheduler.step()
 
         self.log('avg_weight', weights.mean())
         self.log('meta_loss', meta_loss.mean())
@@ -173,7 +152,7 @@ class LCEModel(pl.LightningModule):
         opt.zero_grad()
         self.manual_backward(main_loss.mean())
         opt.step()
-        #scheduler.step()
+        scheduler.step()
 
         tqdm_dict = {'meta_loss': loss.mean(), 'avg_weight': weights.mean(), 'main_loss': loss.mean()}
         output = OrderedDict({
@@ -189,13 +168,13 @@ class LCEModel(pl.LightningModule):
     def configure_optimizers(self):
         meta_opt = AdamW(self.weights.parameters(), lr=self.hparams.meta_lr)
         opt = AdamW(self.model.parameters(), lr=self.hparams.lr)
-        '''
+
         meta_sched = get_linear_schedule_with_warmup(meta_opt, 
                                                 num_warmup_steps=self.hparams.warmup_steps, 
                                                 num_training_steps=self.hparams.total_steps)
         sched = get_linear_schedule_with_warmup(opt, 
                                                 num_warmup_steps=self.hparams.warmup_steps, 
                                                 num_training_steps=self.hparams.total_steps)
-        '''
-        return [meta_opt, opt]
-        #return [meta_opt, opt], [meta_sched, sched]
+
+        #return [meta_opt, opt]
+        return [meta_opt, opt], [meta_sched, sched]
