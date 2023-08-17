@@ -78,7 +78,8 @@ def main(data: str,
         #'callbacks': [pl.callbacks.ProgressBar(), pl.callbacks.LearningRateMonitor(logging_interval='step')],
         'logger': logger,
         #'detect_anomaly' : True
-        'max_epochs' : 1
+        'max_epochs' : 1,
+        'default_root_dir' : out_dir,
     }
 
     if num_gpus > 1:
@@ -94,7 +95,7 @@ def main(data: str,
     trainer.fit(model, data_module)
 
     # save model
-    model.model.save_pretrained(os.path.join(out_dir, 'model'))
+    model.model.save_pretrained(os.path.join(out_dir, 'finalmodel'))
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
