@@ -82,7 +82,6 @@ def main(data: str,
         'max_epochs' : 1,
         'default_root_dir' : out_dir,
         'profiler' : 'simple',
-        'gpus' : [i for i in range(num_gpus)],
     }
     if max_steps: 
         trainer_args['max_steps'] = max_steps
