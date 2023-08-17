@@ -32,7 +32,8 @@ def main(data: str,
          sample: bool = False, 
          use_mean: bool = False, 
          num_gpus: int = 1, 
-         wandb_project: str = None):
+         wandb_project: str = None,
+         num_workers: int = 8,):
     #pl.seed_everything(42, workers=True)
     os.makedirs(out_dir, exist_ok=True)
     
@@ -64,11 +65,10 @@ def main(data: str,
     model = LCEModel(args)
     # set up data module
     
-    data_module = LCEDataModule(data, dataset_name, model.tokenizer, batch_size, sample, use_max, var=var, n=n, init_weight=model.weights.eta.item(), num_workers=4 if num_gpus < 2 else 0)
+    data_module = LCEDataModule(data, dataset_name, model.tokenizer, batch_size, sample, use_max, var=var, n=n, init_weight=model.weights.eta.item(), num_workers=num_workers)
     data_module.setup()
     
     # set up model
-   
 
     logger = pl.loggers.WandbLogger(project=wandb_project)
     
@@ -80,9 +80,12 @@ def main(data: str,
         #'detect_anomaly' : True
         'max_epochs' : 1,
         'default_root_dir' : out_dir,
+        'profiler' : 'simple',
+        'gpus' : [i for i in range(num_gpus)],
     }
 
     if num_gpus > 1:
+        trainer_args['accelerator'] = 'gpu'
         trainer_args['strategy'] = 'ddp'
 
     # set up trainer
