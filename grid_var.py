@@ -7,7 +7,7 @@ def main(script, data, dataset, out_dir, batch_size=16, lr=0.001, meta_lr=None, 
     #variance = [0.01, 0.025, 0.05, 0.0075, 0.1]
     #N = [2, 4, 8, 16]
     variance = [0.01, 0.05, 0.1]
-    N = [2, 4, 16]
+    N = [4, 8]
     start = -np.log(0.5)*0.5
 
     for var in variance:

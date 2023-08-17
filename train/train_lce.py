@@ -1,3 +1,4 @@
+import logging
 from typing import NamedTuple
 from fire import Fire
 from pacednegatives.lceT5 import LCEModel, LCEDataModule, ChangeDifficulty
@@ -96,5 +97,6 @@ def main(data: str,
     model.model.save_pretrained(os.path.join(out_dir, 'model'))
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     Fire(main)
 
