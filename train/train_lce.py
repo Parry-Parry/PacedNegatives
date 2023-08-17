@@ -33,7 +33,8 @@ def main(data: str,
          use_mean: bool = False, 
          num_gpus: int = 1, 
          wandb_project: str = None,
-         num_workers: int = 8,):
+         num_workers: int = 8,
+         max_steps: int = None,):
     #pl.seed_everything(42, workers=True)
     os.makedirs(out_dir, exist_ok=True)
     
@@ -83,6 +84,8 @@ def main(data: str,
         'profiler' : 'simple',
         'gpus' : [i for i in range(num_gpus)],
     }
+    if max_steps: 
+        trainer_args['max_steps'] = max_steps
 
     if num_gpus > 1:
         trainer_args['accelerator'] = 'gpu'
