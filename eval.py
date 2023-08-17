@@ -21,12 +21,12 @@ def main(model_dir : str, out : str, eval_name : str, baseline : str, model : st
             _model = bm25 >> pt.text.get_text(dataset, "text") >> MonoT5ReRanker(model=join(model_dir, store, 'model'))
             models = {'baseline' : baseline, store : _model}
             res = pt.Experiment(list(models.values()), eval.get_topics(), eval.get_qrels(), eval_metrics=["map", "ndcg_cut_10", "recip_rank"], names = list(models.keys()), baseline = 0)
-            qres = pt.Experiment(list(models.values()), eval.get_topics(), eval.get_qrels(), eval_metrics=["map", "ndcg_cut_10", "recip_rank"], names = list(models.keys()), perquery=True)
-            if i != 0:
-                res = res.reset_index().drop(0)
-                qres = qres.reset_index().drop(0)
-            tmp_res.append(res)
-            tmp_qres.append(qres)
+            #qres = pt.Experiment(list(models.values()), eval.get_topics(), eval.get_qrels(), eval_metrics=["map", "ndcg_cut_10", "recip_rank"], names = list(models.keys()), perquery=True)
+            #if i != 0:
+                #res = res.reset_index().drop(0)
+                #qres = qres.reset_index().drop(0)
+            res.to_csv(join(out, f"{store}_results.csv"))
+            #qres.to_csv(join(out, f"{store}_perqueryresults.csv"))
             del _model
         
         res = pd.concat(tmp_res)
