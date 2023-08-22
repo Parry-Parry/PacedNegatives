@@ -58,7 +58,7 @@ class EnsembleScorer(pt.Transformer):
 
         return add_ranks(self.get_fusion_scores(sets, qids))
 
-def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100000, budget : int = 1000, batch_size : int = 1000):
+def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100000, budget : int = 1000, batch_size : int = 1000, num_threads : int = 8):
     index = pt.IndexFactory.of(index_path, "terrier_stemmed")
 
     bm25 = pt.BatchRetrieve(index, wmodel="BM25", controls={"bm25.k_1": 0.45, "bm25.b": 0.55, "bm25.k_3": 0.5})
@@ -69,11 +69,11 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
     rm3 = pt.rewrite.RM3(index)
 
     models = [
-        bm25 >> bo1 >> bm25 % budget,
-        bm25 >> kl >> bm25 % budget,
-        bm25 >> rm3 >> bm25 % budget,
-        dph >> bo1 >> dph % budget,
-        dph >> kl >> dph % budget,
+        (bm25 >> bo1 >> bm25 % budget).parallel(num_threads),
+        (bm25 >> kl >> bm25 % budget).parallel(num_threads),
+        (bm25 >> rm3 >> bm25 % budget).parallel(num_threads),
+        (dph >> bo1 >> dph % budget).parallel(num_threads),
+        (dph >> kl >> dph % budget).parallel(num_threads),
     ]
 
     scorer = EnsembleScorer(models, C=0.0)
