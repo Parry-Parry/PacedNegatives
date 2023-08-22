@@ -59,14 +59,14 @@ class EnsembleScorer(pt.Transformer):
         return add_ranks(self.get_fusion_scores(sets, qids))
 
 def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100000, budget : int = 1000, batch_size : int = 1000, num_threads : int = 8):
-    #index = pt.IndexFactory.of(index_path, "terrier_stemmed")
+    index = pt.get_dataset(index_path).get_index("terrier_stemmed")
 
-    bm25 = pt.BatchRetrieve(index_path, "terrier_stemmed", wmodel="BM25", controls={"bm25.k_1": 0.45, "bm25.b": 0.55, "bm25.k_3": 0.5})
-    dph = pt.BatchRetrieve(index_path, "terrier_stemmed", wmodel="DPH")
+    bm25 = pt.BatchRetrieve(index, controls={"bm25.k_1": 0.45, "bm25.b": 0.55, "bm25.k_3": 0.5})
+    dph = pt.BatchRetrieve(index, wmodel="DPH")
 
-    bo1 = pt.rewrite.Bo1QueryExpansion(index_path, "terrier_stemmed")
-    kl = pt.rewrite.KLQueryExpansion(index_path, "terrier_stemmed")
-    rm3 = pt.rewrite.RM3(index_path, "terrier_stemmed")
+    bo1 = pt.rewrite.Bo1QueryExpansion(index)
+    kl = pt.rewrite.KLQueryExpansion(index)
+    rm3 = pt.rewrite.RM3(index)
 
     models = [
         (bm25 >> bo1 >> bm25 % budget).parallel(num_threads),
