@@ -67,13 +67,21 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
     bo1 = pt.rewrite.Bo1QueryExpansion(index)
     kl = pt.rewrite.KLQueryExpansion(index)
     rm3 = pt.rewrite.RM3(index)
-
-    models = [
+    '''
+    models = [  
         (bm25 >> bo1 >> bm25 % budget).parallel(num_threads),
         (bm25 >> kl >> bm25 % budget).parallel(num_threads),
         (bm25 >> rm3 >> bm25 % budget).parallel(num_threads),
         (dph >> bo1 >> dph % budget).parallel(num_threads),
         (dph >> kl >> dph % budget).parallel(num_threads),
+    ]
+    '''
+    models = [  
+        (bm25 >> bo1 >> bm25 % budget),
+        (bm25 >> kl >> bm25 % budget),
+        (bm25 >> rm3 >> bm25 % budget),
+        (dph >> bo1 >> dph % budget),
+        (dph >> kl >> dph % budget),
     ]
 
     scorer = EnsembleScorer(models, C=0.0)
