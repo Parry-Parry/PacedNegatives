@@ -63,6 +63,7 @@ clean = lambda x : re.sub(r"[^a-zA-Z0-9¿]+", " ", x)
 
 def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100000, budget : int = 1000, batch_size : int = 1000, num_threads : int = 8):
     index = pt.get_dataset(index_path).get_index("terrier_stemmed")
+    index = pt.IndexFactory.of(index, memory=True)
 
     bm25 = pt.BatchRetrieve(index, controls={"bm25.k_1": 0.45, "bm25.b": 0.55, "bm25.k_3": 0.5})
     dph = pt.BatchRetrieve(index, wmodel="DPH")
