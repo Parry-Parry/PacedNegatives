@@ -79,7 +79,7 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
     scorer = EnsembleScorer(models, C=0.0)
 
     dataset = irds.load(dataset_name)
-    queries = pd.DataFrame(dataset.queries_iter()).set_index('qid')['text'].to_dict()
+    queries = pd.DataFrame(dataset.queries_iter()).set_index('query_id')['text'].to_dict()
     train = pd.DataFrame(dataset.docpairs_iter()).drop(['doc_id_b'], axis=1).rename(columns={'query': 'qid',})
     train = dataset.sample(n=subset) 
 
@@ -92,8 +92,9 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
 
     for subset in tqdm(split_df(train, batch_size), desc="Total Batched Iter"):
         new = subset.copy()
-        res = scorer.transform(subset).drop(['score', 'rank'], axis=1)
-        new['doc_id_b'] = res.apply(lambda x : x[x.qid==subset.qid]['docno'].iloc[:1000].sample(n=1))
+        topics = subset['qid', 'query'].drop_duplicates()
+        res = scorer.transform(topics).drop(['score', 'rank'], axis=1)
+        new['doc_id_b'] = new.apply(lambda x : res[res.qid==x.qid]['docno'].iloc[:1000].sample(n=1))
         new_set.append(new)
 
     new_set = pd.concat(new_set)
