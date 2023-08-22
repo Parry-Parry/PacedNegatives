@@ -88,7 +88,7 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
 
     dataset = irds.load(dataset_name)
     queries = pd.DataFrame(dataset.queries_iter()).set_index('query_id')['text'].to_dict()
-    train = pd.DataFrame(dataset.docpairs_iter()).drop(['doc_id_b'], axis=1).rename(columns={'query': 'qid',})
+    train = pd.DataFrame(dataset.docpairs_iter()).drop(['doc_id_b'], axis=1).rename(columns={'query_id': 'qid',})
     train = train.sample(n=subset) 
 
     train['query'] = train['qid'].apply(lambda x : queries[x])
