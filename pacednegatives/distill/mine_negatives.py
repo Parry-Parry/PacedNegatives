@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 import logging
 import ir_datasets as irds
+import gc
 
 def convert_to_dict(result):
     result = result.groupby('qid').apply(lambda x: dict(zip(x['docno'], zip(x['score'], x['rank'])))).to_dict()
@@ -58,7 +59,7 @@ class EnsembleScorer(pt.Transformer):
         return add_ranks(self.get_fusion_scores(sets, qids))
 
 def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100000, budget : int = 1000, batch_size : int = 1000):
-    index = pt.IndexFactory.of(index_path)
+    index = pt.IndexFactory.of(index_path, "terrier_stemmed")
 
     bm25 = pt.BatchRetrieve(index, wmodel="BM25", controls={"bm25.k_1": 0.45, "bm25.b": 0.55, "bm25.k_3": 0.5})
     dph = pt.BatchRetrieve(index, wmodel="DPH")
@@ -83,6 +84,9 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
     train = dataset.sample(n=subset) 
 
     train['query'] = train['qid'].apply(lambda x : queries[x])
+    del queries
+    del dataset
+    gc.collect()
 
     new_set = []
 
