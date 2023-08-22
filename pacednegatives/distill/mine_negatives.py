@@ -9,6 +9,7 @@ from tqdm import tqdm
 import logging
 import ir_datasets as irds
 import gc
+import re
 
 def convert_to_dict(result):
     result = result.groupby('qid').apply(lambda x: dict(zip(x['docno'], zip(x['score'], x['rank'])))).to_dict()
@@ -58,6 +59,8 @@ class EnsembleScorer(pt.Transformer):
 
         return add_ranks(self.get_fusion_scores(sets, qids))
 
+clean = lambda x : re.sub(r"[^a-zA-Z0-9¿]+", " ", x)
+
 def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100000, budget : int = 1000, batch_size : int = 1000, num_threads : int = 8):
     index = pt.get_dataset(index_path).get_index("terrier_stemmed")
 
@@ -91,7 +94,7 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
     train = pd.DataFrame(dataset.docpairs_iter()).drop(['doc_id_b'], axis=1).rename(columns={'query_id': 'qid',})
     train = train.sample(n=subset) 
 
-    train['query'] = train['qid'].apply(lambda x : queries[x])
+    train['query'] = train['qid'].apply(lambda x : clean(queries[x]))
     del queries
     del dataset
     gc.collect()
