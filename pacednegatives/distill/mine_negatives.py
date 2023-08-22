@@ -1,3 +1,4 @@
+from collections import defaultdict
 import pyterrier as pt
 if not pt.started():
     pt.init(boot_packages=["com.github.terrierteam:terrier-prf:-SNAPSHOT"])
@@ -35,6 +36,9 @@ class EnsembleScorer(pt.Transformer):
                     })
             return pd.DataFrame.from_records(records)
         for qid in qids:
+            for target in target_sets:
+                if qid not in target:
+                    target[qid] = defaultdict(lambda: self.DEFAULT)
             all_sets = [set(target[qid].keys()) for target in target_sets]
             candidates = all_sets[0].union(*all_sets[1:])
             for candidate in candidates:
