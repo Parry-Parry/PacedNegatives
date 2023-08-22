@@ -100,7 +100,7 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
 
     for subset in tqdm(split_df(train, batch_size), desc="Total Batched Iter"):
         new = subset.copy()
-        topics = subset['qid', 'query'].drop_duplicates()
+        topics = subset[['qid', 'query']].drop_duplicates()
         res = scorer.transform(topics).drop(['score', 'rank'], axis=1)
         new['doc_id_b'] = new.apply(lambda x : res[res.qid==x.qid]['docno'].iloc[:1000].sample(n=1))
         new_set.append(new)
