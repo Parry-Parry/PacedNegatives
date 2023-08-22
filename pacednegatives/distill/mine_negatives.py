@@ -50,7 +50,7 @@ class EnsembleScorer(pt.Transformer):
 
     def transform(self, inp):
         result_sets = []
-        for model in tqdm(self.models):
+        for model in tqdm(self.models, desc="Model Iter"):
             result_sets.append(model.transform(inp))
         sets = [convert_to_dict(res) for res in result_sets]
         qids = list(inp["qid"].unique())
@@ -78,23 +78,22 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
     scorer = EnsembleScorer(models, C=0.0)
 
     dataset = irds.load(dataset_name)
-    train = pd.DataFrame(dataset.scoredocs_iter())
+    queries = pd.DataFrame(dataset.queries_iter()).set_index('qid')['text'].to_dict()
+    train = pd.DataFrame(dataset.docpairs_iter()).drop(['doc_id_b'], axis=1).rename(columns={'query': 'qid',})
     train = dataset.sample(n=subset) 
+
+    train['query'] = train['qid'].apply(lambda x : queries[x])
 
     new_set = []
 
-    for subset in split_df(train, batch_size):
+    for subset in tqdm(split_df(train, batch_size), desc="Total Batched Iter"):
         new = subset.copy()
-        res = scorer.transform(subset)
-        new['doc_id_b'] = subset.apply(lambda x : res[res.qid==subset.qid].sample(n=1))
+        res = scorer.transform(subset).drop(['score', 'rank'], axis=1)
+        new['doc_id_b'] = res.apply(lambda x : x[x.qid==subset.qid]['docno'].iloc[:1000].sample(n=1))
         new_set.append(new)
 
-    new_set = pd.concat(new_set).rename(columns={'docno': 'doc_id_a'})
-
-
-
-
-    topics.to_csv(join(out_dir, 'topics.tsv'), sep="\t", index=False, header=True)
+    new_set = pd.concat(new_set)
+    new_set.to_csv(out_dir, sep='\t', index=False)
 
     return "Done!"
 
