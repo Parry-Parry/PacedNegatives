@@ -106,8 +106,11 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
         #print(new.head())
         topics = subset[['qid', 'query']].drop_duplicates()
         res = scorer.transform(topics).drop(['score', 'rank'], axis=1)
-        #print(res.head())
-        new['doc_id_b'] = new.apply(lambda x : res[res.qid==x.qid]['docno'].iloc[:1000].sample(n=1), axis=1)
+
+        def get_sample(qid):
+            return res[res.qid==qid].iloc[:1000].sample(n=1)['docno'].iloc[0]
+
+        new['doc_id_b'] = new.apply(lambda x : get_sample(x['qid']), axis=1)
         new_set.append(new)
 
     new_set = pd.concat(new_set)
