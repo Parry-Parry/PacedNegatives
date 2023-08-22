@@ -52,7 +52,7 @@ class EnsembleScorer(pt.Transformer):
 
     def transform(self, inp):
         result_sets = []
-        for model in tqdm(self.models, desc="Model Iter"):
+        for model in self.models:
             result_sets.append(model.transform(inp))
         sets = [convert_to_dict(res) for res in result_sets]
         qids = list(inp["qid"].unique())
