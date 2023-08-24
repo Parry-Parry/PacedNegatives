@@ -31,7 +31,7 @@ def main(triples_path : str,
     models = [
         pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "Bo1"}, background_index=index),
         pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "KL"}, background_index=index),
-        pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "RM3"}, background_index=index, properties=properties),
+        pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "rm3" : "on"}, background_index=index, properties=properties),
         pt.text.scorer(body_attr="text", wmodel="DPH", controls={"qe":"on", "qemodel" : "Bo1"}, background_index=index),
         pt.text.scorer(body_attr="text", wmodel="DPH", controls={"qe":"on", "qemodel" : "KL"}, background_index=index),
     ]
