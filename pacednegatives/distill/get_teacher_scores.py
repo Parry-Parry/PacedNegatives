@@ -53,7 +53,7 @@ def main(triples_path : str,
         return pd.DataFrame.from_records(records)
 
     def convert_to_dict(result):
-        lookup = defaultdict(defaultdict(lambda : 0))
+        lookup = defaultdict(defaultdict(lambda x : 0))
         for row in result.itertuples():
             lookup[row.qid][row.docno] = row.score
         return lookup
