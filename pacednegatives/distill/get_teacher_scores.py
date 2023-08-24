@@ -36,19 +36,20 @@ def main(triples_path : str,
     
     def pivot_batch(batch):
         print(batch.columns)
+        print(batch.head(5))
         records = []
         for row in batch.itertuples():
             records.extend([{
                 'qid': row.qid,
                 'query': row['query'],
-                'docno': row['doc_id_a'],
-                'text': docs[row['doc_id_a']]
+                'docno': row.doc_id_a,
+                'text': docs[row.doc_id_a]
                 },
                 {
                 'qid': row.qid,
-                'query': row['query'],
-                'docno': row['doc_id_b'],
-                'text': docs[row['doc_id_b']],
+                'query': row.query,
+                'docno': row.doc_id_b,
+                'text': docs[row.doc_id_b],
                 }
                 ])
         return pd.DataFrame.from_records(records)
