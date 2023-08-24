@@ -108,7 +108,6 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
 
     for subset in tqdm(split_df(train, batch_size), desc="Total Batched Iter"):
         new = subset.copy()
-        #print(new.head())
         topics = subset[['qid', 'query']].drop_duplicates()
         res = scorer.transform(topics).drop(['score', 'rank'], axis=1)
 
@@ -126,11 +125,3 @@ def main(index_path : str, dataset_name : str, out_dir : str, subset : int = 100
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     Fire(main)
-
-
-
-
-
-
-
-
