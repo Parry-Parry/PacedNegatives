@@ -37,8 +37,6 @@ def main(triples_path : str,
     ]
     
     def pivot_batch(batch):
-        print(batch.columns)
-        print(batch.head(5))
         records = []
         for row in batch.itertuples():
             records.extend([{
@@ -65,7 +63,7 @@ def main(triples_path : str,
     def score(batch, model, norm=False):
         rez = model.transform(batch)
         if norm:
-            # minax norm over each query score set 
+            # minmax norm over each query score set 
             rez['score'] = rez.groupby('qid')['score'].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
         return convert_to_dict(rez)
         
