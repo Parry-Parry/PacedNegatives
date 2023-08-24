@@ -53,7 +53,7 @@ def main(triples_path : str,
         return pd.DataFrame.from_records(records)
 
     def convert_to_dict(result):
-        lookup = defaultdict(defaultdict(lambda x : 0))
+        lookup = defaultdict(lambda : defaultdict(lambda : 0))
         for row in result.itertuples():
             lookup[row.qid][row.docno] = row.score
         return lookup
@@ -65,7 +65,7 @@ def main(triples_path : str,
             rez['score'] = rez.groupby('qid')['score'].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
         return convert_to_dict(rez)
         
-    main_lookup = defaultdict(defaultdict(lambda x: 0))
+    main_lookup = defaultdict(dict)
 
     for batch in tqdm(split_df(triples, ceil(len(triples) / batch_size))):
         to_score = pivot_batch(batch)
@@ -76,7 +76,7 @@ def main(triples_path : str,
         absolute_scores = [1. if i % 2 == 0 else 0. for i in range(len(to_score))]
         to_score['score'] = absolute_scores
 
-        main_lookup[len(models)+1].append(convert_to_dict(to_score))
+        main_lookup[len(models)+1].update(convert_to_dict(to_score))
         
     
     with open(out_path, 'w') as f:
