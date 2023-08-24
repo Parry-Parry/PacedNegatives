@@ -17,7 +17,7 @@ def main(triples_path : str,
          out_path : str,
          batch_size : int = 1000,) -> str:
     
-    triples = pd.read_csv(triples_path, sep="\t", names=["qid", "doc_id_a", "query" "doc_id_b"], dtype={"qid":str, "doc_id_a":str, "query":str, "doc_id_b":str})
+    triples = pd.read_csv(triples_path, sep="\t", names=["qid", "doc_id_a", "query", "doc_id_b"], dtype={"qid":str, "doc_id_a":str, "query":str, "doc_id_b":str})
     dataset = irds.load(corpus_lookup)
     docs = pd.DataFrame(dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
 
