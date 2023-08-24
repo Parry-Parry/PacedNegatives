@@ -27,11 +27,11 @@ def main(triples_path : str,
     properties = { 'querying.processes' : pt.BatchRetrieve.default_properties['querying.processes'].replace('qe:QueryExpansion', 'qe:QueryExpansion,rm1:RM1,rm3:RM3') }
 
     models = [
-        pt.text.TextScorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "Bo1"}, background_index=index),
-        pt.text.TextScorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "KL"}, background_index=index),
-        pt.text.TextScorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "rm3"}, background_index=index, properties=properties),
-        pt.text.TextScorer(body_attr="text", wmodel="DPH", controls={"qe":"on", "qemodel" : "Bo1"}, background_index=index),
-        pt.text.TextScorer(body_attr="text", wmodel="DPH", controls={"qe":"on", "qemodel" : "KL"}, background_index=index),
+        pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "Bo1"}, background_index=index),
+        pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "KL"}, background_index=index),
+        pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "rm3"}, background_index=index, properties=properties),
+        pt.text.scorer(body_attr="text", wmodel="DPH", controls={"qe":"on", "qemodel" : "Bo1"}, background_index=index),
+        pt.text.scorer(body_attr="text", wmodel="DPH", controls={"qe":"on", "qemodel" : "KL"}, background_index=index),
     ]
     
     def pivot_batch(batch):
@@ -59,7 +59,7 @@ def main(triples_path : str,
         return lookup
     
     def score(batch, model, norm=False):
-        rez = model.score(batch)
+        rez = model.transform(batch)
         if norm:
             # group by query and minmax normalise score 
             rez['score'] = rez.groupby('qid')['score'].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
