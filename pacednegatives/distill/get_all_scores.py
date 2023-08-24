@@ -67,7 +67,7 @@ def main(triples_path : str,
         rez = model.transform(batch)
         if norm:
             # minmax norm over each query score set 
-            rez['score'] = rez.groupby('qid')['score'].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
+            rez['score'] = rez.groupby('qid', group_keys=False)['score'].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
         return rez
    
     main_lookup = defaultdict(dict)
