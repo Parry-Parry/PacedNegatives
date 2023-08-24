@@ -40,15 +40,15 @@ def main(triples_path : str,
         for row in batch.itertuples():
             records.extend([{
                 'qid': row.qid,
-                'query': row.query,
-                'docno': row.doc_id_a,
-                'text': docs[row.doc_id_a]
+                'query': row['query'],
+                'docno': row['doc_id_a'],
+                'text': docs[row['doc_id_a']]
                 },
                 {
                 'qid': row.qid,
-                'query': row.query,
-                'docno': row.doc_id_b,
-                'text': docs[row.doc_id_b],
+                'query': row['query'],
+                'docno': row['doc_id_b'],
+                'text': docs[row['doc_id_b']],
                 }
                 ])
         return pd.DataFrame.from_records(records)
