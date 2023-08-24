@@ -24,8 +24,10 @@ def main(triples_path : str,
     index = pt.get_dataset(index_path).get_index('terrier_stemmed')
     index = pt.IndexFactory.of(index, memory=True)
 
-    properties = { 'querying.processes' : pt.BatchRetrieve.default_properties['querying.processes'].replace('qe:QueryExpansion', 'qe:QueryExpansion,rm1:RM1,rm3:RM3') }
-
+    #properties = { 'querying.processes' : pt.BatchRetrieve.default_properties['querying.processes'].replace('qe:QueryExpansion', 'qe:QueryExpansion,rm1:RM1,rm3:RM3') }
+    properties = {
+        'querying.processes' : "terrierql:TerrierQLParser,parsecontrols:TerrierQLToControls,parseql:TerrierQLToMatchingQueryTerms,matchopql:MatchingOpQLParser,applypipeline:ApplyTermPipeline,localmatching:LocalManager$ApplyLocalMatching,rm1:RM1,rm3:RM3,ax:AxiomaticQE,qe:QueryExpansion,labels:org.terrier.learning.LabelDecorator,filters:LocalManager$PostFilterProcess'"
+    }
     models = [
         pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "Bo1"}, background_index=index),
         pt.text.scorer(body_attr="text", wmodel="BM25", controls={"qe":"on", "qemodel" : "KL"}, background_index=index),
