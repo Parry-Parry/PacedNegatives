@@ -41,7 +41,7 @@ def main(triples_path : str,
         for row in batch.itertuples():
             records.extend([{
                 'qid': row.qid,
-                'query': row['query'],
+                'query': row.query,
                 'docno': row.doc_id_a,
                 'text': docs[row.doc_id_a]
                 },
