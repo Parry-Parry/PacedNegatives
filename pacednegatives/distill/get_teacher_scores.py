@@ -19,7 +19,7 @@ def main(triples_path : str,
     
     triples = pd.read_csv(triples_path, sep="\t", names=["qid", "doc_id_a", "query" "doc_id_b"])
     dataset = irds.load(corpus_lookup)
-    docs = pd.DataFrame(dataset.docs_iter()).set_index("docno")["text"].to_dict()
+    docs = pd.DataFrame(dataset.docs_iter()).set_index("doc_id")["text"].to_dict()
 
     index = pt.get_dataset(index_path).get_index('terrier_stemmed')
     index = pt.IndexFactory.of(index, memory=True)
