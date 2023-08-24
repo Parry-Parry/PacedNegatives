@@ -1,7 +1,7 @@
 from collections import defaultdict
 import pyterrier as pt 
 if not pt.started():
-    pt.init()
+    pt.init(boot_packages=["com.github.terrierteam:terrier-prf:-SNAPSHOT"])
 from pyterrier.model import split_df
 from fire import Fire
 import pandas as pd
