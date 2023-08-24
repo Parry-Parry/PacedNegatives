@@ -35,6 +35,7 @@ def main(triples_path : str,
     ]
     
     def pivot_batch(batch):
+        print(batch)
         records = []
         for row in batch.itertuples():
             records.extend([{
