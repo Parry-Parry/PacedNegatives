@@ -77,7 +77,7 @@ def main(triples_path : str,
         for i, model in enumerate(models):
             new = pivot_batch(subset.copy())
             res = score(topics, model, norm=True)
-            new['score'] = new.apply(lambda x : res.loc[(res.qid == x['qid']) & (res.docno == x['doc_id_b'])]['score'].iloc[0], axis=1)
+            new['score'] = new.apply(lambda x : res.loc[(res.qid == x['qid']) & (res.docno == x['docno'])]['score'].iloc[0], axis=1)
             main_lookup[i].update(convert_to_dict(new))
 
         ground_truth = pivot_batch(subset.copy())
