@@ -65,7 +65,7 @@ def main(triples_path : str,
     def score(batch, model, norm=False):
         rez = model.transform(batch)
         if norm:
-            # group by query and minmax normalise score 
+            # minax norm over each query score set 
             rez['score'] = rez.groupby('qid')['score'].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
         return convert_to_dict(rez)
         
