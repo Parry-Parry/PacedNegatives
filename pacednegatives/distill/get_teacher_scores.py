@@ -65,7 +65,7 @@ def main(triples_path : str,
             rez['score'] = rez.groupby('qid')['score'].apply(lambda x: (x - x.min()) / (x.max() - x.min()))
         return convert_to_dict(rez)
         
-    main_lookup = defaultdict(defaultdict(lambda : 0))
+    main_lookup = defaultdict(defaultdict(lambda x: 0))
 
     for batch in tqdm(split_df(triples, ceil(len(triples) / batch_size))):
         to_score = pivot_batch(batch)
