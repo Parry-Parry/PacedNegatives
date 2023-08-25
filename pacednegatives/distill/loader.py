@@ -59,7 +59,7 @@ class TeacherLoader:
         y = [self.get_teacher_scores(item['qid'], item['doc_id_a'], neg=False), self.get_teacher_scores(item['qid'], item['doc_id_b'], neg=True)]
         if idx % 1000 == 0:
             print(x, y)
-        return x, y
+        return x, torch.cat(y, dim=0).view(2, -1)
 
     def get_batch(self, idx):
         xs = []
