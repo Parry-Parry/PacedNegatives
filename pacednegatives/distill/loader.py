@@ -32,7 +32,7 @@ class TeacherLoader:
         self.triples = pd.read_csv(self.triples_file, sep='\t', dtype={'qid':str, 'doc_id_a':str, 'doc_id_b':str}, index_col=False)
         if self.shuffle: self.triples = self.triples.sample(frac=1).reset_index(drop=True)
         self.docs = pd.DataFrame(self.corpus.docs_iter()).set_index("doc_id")["text"].to_dict()
-        self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("qid")["text"].to_dict()
+        self.queries = pd.DataFrame(self.corpus.queries_iter()).set_index("query_id")["text"].to_dict()
 
         self.initialized = True
 
