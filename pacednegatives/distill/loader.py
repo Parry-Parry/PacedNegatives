@@ -38,9 +38,9 @@ class TeacherLoader:
 
     def get_teacher_scores(self, qid, doc_id, neg=False) -> torch.Tensor:
         sample = []
-        for _, teacher in self.teacher.items():
+        for _, _teacher in self.teacher.items():
             try:
-                score = teacher[str(qid)][str(doc_id)]
+                score = _teacher[str(qid)][str(doc_id)]
             except KeyError:
                 score = 0. if neg else 1.
             sample.append(score)
@@ -59,7 +59,7 @@ class TeacherLoader:
         y = [self.get_teacher_scores(item['qid'], item['doc_id_a'], neg=False), self.get_teacher_scores(item['qid'], item['doc_id_b'], neg=True)]
         if idx % 1000 == 0:
             print(x, y)
-        return x, torch.cat(y, dim=0).view(2, -1)
+        return x, y
 
     def get_batch(self, idx):
         xs = []
@@ -68,4 +68,4 @@ class TeacherLoader:
             x, y = self[i]
             xs.extend(x)
             ys.extend(y)
-        return self.tokenize(xs), torch.cat(ys, dim=0)
+        return self.tokenize(xs), torch.cat(ys, dim=0).view(-1, len(self.teacher))
