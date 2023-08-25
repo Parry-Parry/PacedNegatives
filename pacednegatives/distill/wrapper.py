@@ -6,8 +6,8 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 class MonoT5Model(nn.Module):
     def __init__(self, model, tokenizer):
         super().__init__()
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.model = model.to(device)
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model = model.to(self.device)
         self.tokenizer = tokenizer
 
         self.rel = self.tokenizer.encode('true')[0]
