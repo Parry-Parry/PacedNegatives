@@ -28,5 +28,5 @@ class MonoT5Model(nn.Module):
     def forward(self, x):
         x['labels'] = self.gen_labels(x['input_ids'])
         logits = self.model(**x).logits
-        result = logits[:, 0, (self.REL, self.NREL)]
+        result = logits[:, 0, (self.rel, self.nrel)]
         return F.log_softmax(result, dim=1)[:, 0].cpu()
