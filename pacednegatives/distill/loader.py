@@ -58,10 +58,10 @@ class TeacherLoader:
         return x, y
 
     def get_batch(self, idx):
-        x = []
-        y = []
+        xs = []
+        ys = []
         for i in range(idx, min(len(self.triples), idx + self.batch_size)):
             x, y = self[i]
-            x.append(x)
-            y.append(y)
-        return self.tokenize(x), torch.cat(y, dim=0)
+            xs.append(x)
+            ys.append(y)
+        return self.tokenize(xs), torch.cat(ys, dim=0)
