@@ -22,7 +22,11 @@ class MonoT5Model(nn.Module):
     def save_pretrained(self, path):
         self.model.save_pretrained(path)
     
+    def gen_labels(self, x):
+        return self.tokenizer(['true' if i % 2 == 0 else 'false' for i in range(len(x))], return_tensors='pt', padding=True).input_ids.to(self.device)
+    
     def forward(self, x):
+        x['labels'] = self.gen_labels(x['input_ids'])
         logits = self.model(**x).logits
         result = logits[:, 0, (self.REL, self.NREL)]
         return F.log_softmax(result, dim=1)[:, 0].cpu()
