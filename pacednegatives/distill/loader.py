@@ -36,10 +36,14 @@ class TeacherLoader:
 
         self.initialized = True
 
-    def get_teacher_scores(self, qid, doc_id) -> torch.Tensor:
+    def get_teacher_scores(self, qid, doc_id, neg=False) -> torch.Tensor:
         sample = []
         for _, teacher in self.teacher.items():
-            score = teacher[qid][doc_id]
+            try:
+                score = teacher[str(qid)][str(doc_id)]
+            except KeyError:
+                score = 0. if neg else 1.
+            score = teacher[str(qid)][str(doc_id)]
             sample.append(score)
 
         return torch.tensor(sample)
@@ -52,8 +56,8 @@ class TeacherLoader:
     
     def __getitem__(self, idx):
         item = self.triples.iloc[idx]
-        x = self.format(self.queries[item['qid']], self.docs[item['doc_id_a']])
-        y = self.get_teacher_scores(item['qid'], item['doc_id_a'])
+        x = [self.format(self.queries[item['qid']], self.docs[item['doc_id_a']]), self.format(self.queries[item['qid']], self.docs[item['doc_id_b']])]
+        y = [self.get_teacher_scores(item['qid'], item['doc_id_a'], neg=False), self.get_teacher_scores(item['qid'], item['doc_id_b'], neg=True)]
 
         return x, y
 
@@ -62,6 +66,6 @@ class TeacherLoader:
         ys = []
         for i in range(idx, min(len(self.triples), idx + self.batch_size)):
             x, y = self[i]
-            xs.append(x)
-            ys.append(y)
+            xs.extend(x)
+            ys.extend(y)
         return self.tokenize(xs), torch.cat(ys, dim=0)
