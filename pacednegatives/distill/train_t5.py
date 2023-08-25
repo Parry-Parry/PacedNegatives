@@ -1,7 +1,5 @@
 from fire import Fire
 import os
-import json
-import pandas as pd
 import ir_datasets as irds
 from pacednegatives.distill import TeacherLoader, MarginMSELoss, MonoT5Model
 from transformers import AdamW, get_linear_schedule_with_warmup
@@ -16,7 +14,6 @@ def main(
         total_steps : int = 100000, 
         batch_size : int = 16, 
         lr : float = 0.001, 
-        max=True,
         warmup_steps=0,
         shuffle=False,
         wandb_project=None,):
@@ -30,7 +27,6 @@ def main(
                 'total_steps': total_steps,
                 'batch_size': batch_size,
                 'lr': lr,
-                'max': max,
                 'warmup_steps': warmup_steps,
             })
 

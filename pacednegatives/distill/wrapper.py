@@ -4,6 +4,7 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 
 class MonoT5Model(nn.Module):
     def __init__(self, model, tokenizer):
+        super().__init__()
         self.model = model
         self.tokenizer = tokenizer
 
