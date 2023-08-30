@@ -57,7 +57,7 @@ def main(
             pred = model.forward(x)
 
             opt.zero_grad()
-            loss = loss_fn(pred, y)
+            loss = loss_fn(pred.view(-1, pred.size[-1]), y.view(-1))
             loss.backward()
             opt.step()
             sched.step()
