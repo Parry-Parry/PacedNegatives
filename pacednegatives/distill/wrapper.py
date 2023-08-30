@@ -67,7 +67,7 @@ class Baseline(nn.Module):
     
     def forward(self, x):
         x['labels'] = self.gen_labels(x['input_ids'])
-        return self.model(**x).logits
+        return self.model(**x)
         
 
 

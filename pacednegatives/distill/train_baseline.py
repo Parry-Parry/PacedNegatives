@@ -33,7 +33,7 @@ def main(
             })
 
     corpus = irds.load(dataset_name)
-    loss_fn = nn.CrossEntropyLoss(ignore_index=-100, reduction='mean')
+    #loss_fn = nn.CrossEntropyLoss(ignore_index=-100, reduction='mean')
 
     logging.info('loading model...')
     model = Baseline.init()
@@ -52,14 +52,12 @@ def main(
         total_loss = 0.
         for i in range(total_steps // batch_size):
             x, y = loader.get_batch(i)
-            x.to(model.device)
-            y.to(model.device)
             pred = model.forward(x)
 
             print(pred.device, y.device)
 
             opt.zero_grad()
-            loss = loss_fn(pred.view(-1, pred.size(-1)), y.view(-1))
+            loss = pred.loss
             loss.backward()
             opt.step()
             sched.step()
