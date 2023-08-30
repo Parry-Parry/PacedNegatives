@@ -67,7 +67,7 @@ def main(
             total_loss += loss.item()
 
             pbar.update(1)
-            pbar.set_postfix({'loss': total_loss/i})
+            pbar.set_postfix({'loss': total_loss/i+1})
 
     model.save_pretrained(os.path.join(out_dir, 'model'))
 
