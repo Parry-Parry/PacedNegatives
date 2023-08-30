@@ -113,4 +113,4 @@ class StandardLoader:
         for i in range(idx, min(len(self.triples), idx + self.batch_size)):
             x = self[i]
             xs.extend(x)
-        return self.tokenize(xs), self.tokenizer(['true' if i % 2 == 0 else 'false' for i in range(len(x))], return_tensors='pt', padding=True).input_ids
+        return self.tokenize(xs), self.tokenizer(['true' if i % 2 == 0 else 'false' for i in range(len(xs))], return_tensors='pt', padding=True).input_ids
