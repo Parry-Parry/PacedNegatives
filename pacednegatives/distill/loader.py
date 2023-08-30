@@ -57,8 +57,6 @@ class TeacherLoader:
         item = self.triples.iloc[idx]
         x = [self.format(self.queries[item['qid']], self.docs[item['doc_id_a']]), self.format(self.queries[item['qid']], self.docs[item['doc_id_b']])]
         y = [self.get_teacher_scores(item['qid'], item['doc_id_a'], neg=False), self.get_teacher_scores(item['qid'], item['doc_id_b'], neg=True)]
-        if idx % 1000 == 0:
-            print(x, y)
         return x, y
 
     def get_batch(self, idx):
