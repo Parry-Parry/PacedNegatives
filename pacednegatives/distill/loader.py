@@ -114,4 +114,4 @@ class StandardLoader:
             x = self[i]
             xs.extend(x)
         y = self.tokenizer(['true' if i % 2 == 0 else 'false' for i in range(len(xs))], return_tensors='pt', padding=True).input_ids
-        return self.tokenize(xs), y
+        return self.tokenize(xs).input_ids, y
