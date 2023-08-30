@@ -56,6 +56,8 @@ def main(
             y.to(model.device)
             pred = model.forward(x)
 
+            print(pred.device, y.device)
+
             opt.zero_grad()
             loss = loss_fn(pred.view(-1, pred.size(-1)), y.view(-1))
             loss.backward()
