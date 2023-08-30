@@ -52,9 +52,8 @@ def main(
         total_loss = 0.
         for i in range(total_steps // batch_size):
             x, y = loader.get_batch(i)
+            x = x.to(model.device)
             pred = model.forward(x)
-
-            print(pred.device, y.device)
 
             opt.zero_grad()
             loss = pred.loss
