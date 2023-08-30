@@ -43,7 +43,6 @@ def main(
 
     for i in range(total_steps // batch_size):
         x, y = loader.get_batch(i)
-        print(y.shape)
         x.to(model.device)
         y.to(model.device)
         pred = model.forward(x)

@@ -25,6 +25,12 @@ class MonoT5Model(nn.Module):
     def gen_labels(self, x):
         return self.tokenizer(['true' if i % 2 == 0 else 'false' for i in range(len(x))], return_tensors='pt', padding=True).input_ids.to(self.device)
     
+    def train(self):
+        self.model.train()
+    
+    def parameters(self):
+        return self.model.parameters()
+    
     def forward(self, x):
         x['labels'] = self.gen_labels(x['input_ids'])
         logits = self.model(**x).logits
