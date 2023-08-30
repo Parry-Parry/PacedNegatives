@@ -56,7 +56,7 @@ def main(
             y.to(model.device)
             pred = model.forward(x)
 
-            print(x.device)
+            print(x.input_ids.device)
             print(y.device)
             print(pred.device)
 
